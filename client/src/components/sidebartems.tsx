@@ -3,11 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { LayoutDashboard, Users, ArrowRightLeft, Wallet, LogOut, ShieldCheck } from "lucide-react";
 
 export function SidebarItem() {
-    const [active, setActive] = useState(false);
-
-    const isActived = () => {
-        //setActive(!active);
-    };
+    const [active, setActive] = useState<string>("");
 
     return (
         <div>
@@ -31,9 +27,9 @@ export function SidebarItem() {
                 <nav>
                     <NavLink to={"/"}>
                         <button
-                            onClick={isActived}
+                            onClick={() => setActive("dashborad")}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active
+                                active === "dashborad"
                                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
                                     : "text-slate-400 hover:bg-slate-800 hover:text-white"
                             }`}>
@@ -43,9 +39,9 @@ export function SidebarItem() {
                     </NavLink>
                     <NavLink to={"/client"}>
                         <button
-                            onClick={isActived}
+                            onClick={() => setActive("client")}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active
+                                active === "client"
                                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
                                     : "text-slate-400 hover:bg-slate-800 hover:text-white"
                             }`}>
@@ -55,9 +51,9 @@ export function SidebarItem() {
                     </NavLink>
                     <NavLink to={"/agent"}>
                         <button
-                            onClick={isActived}
+                            onClick={() => setActive("agent")}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active
+                                active === "agent"
                                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
                                     : "text-slate-400 hover:bg-slate-800 hover:text-white"
                             }`}>
@@ -67,9 +63,9 @@ export function SidebarItem() {
                     </NavLink>
                     <NavLink to={"/transactions"}>
                         <button
-                            onClick={isActived}
+                            onClick={() => setActive("transactions")}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active
+                                active === "transactions"
                                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
                                     : "text-slate-400 hover:bg-slate-800 hover:text-white"
                             }`}>
@@ -79,9 +75,9 @@ export function SidebarItem() {
                     </NavLink>
                     <NavLink to={"/comptabilité"}>
                         <button
-                            onClick={isActived}
+                            onClick={() => setActive("comptabilité")}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active
+                                active === "comptabilité"
                                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
                                     : "text-slate-400 hover:bg-slate-800 hover:text-white"
                             }`}>
