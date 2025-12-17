@@ -1,6 +1,7 @@
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import TableauAgent from "../components/agentUI/tableauAgent";
 import React, { useState } from "react";
+import Addagents from "../components/agentUI/addagents";
 type agentType = {
     code_agents: number;
     nom_prenom: string;
@@ -67,36 +68,7 @@ export default function AgentPage() {
     return (
         <div>
             {update ? (
-                <div className="py-20">
-                    <div className=" bg-slate-800 w-[40%]  mx-auto flex-col justify-center p-5 rounded-2xl shadow-lg shadow-indigo-500/20">
-                        <div className="flex flex-row w-full gap-5">
-                            <h2 className="text-center font-bold text-2xl  ">Ajouter un Agents</h2>
-                            <button className="text-black ml-auto " onClick={() => setUpdate(false)}>
-                                {" "}
-                                <X size={20} className="bg-error rounded-full" />{" "}
-                            </button>
-                        </div>
-
-                        <form action="" className="mx-auto w-100 flex flex-col" onSubmit={handleSubmit}>
-                            <label className="input mt-5 ">
-                                <input type="number" className=" w-full" name="code" placeholder="code" />
-                            </label>
-
-                            <label className="input mt-5 ">
-                                <input type="text" className="grow" name="name" placeholder="Nom prenom" />
-                            </label>
-                            <label className="input mt-5 ">
-                                <input type="number" className="grow" name="tel" placeholder="N° de télephone" />
-                            </label>
-                            <label className="input mt-5 ">
-                                <input type="text" className="grow" name="adresse" placeholder="Adresse" />
-                            </label>
-                            <button type="submit" className="btn btn-primary m-5">
-                                Ajouter
-                            </button>
-                        </form>
-                    </div>
-                </div>
+                <Addagents handleSubmit={handleSubmit} update={update} setUpdate={setUpdate} />
             ) : (
                 <div>
                     <div className="p-5">
@@ -121,7 +93,6 @@ export default function AgentPage() {
                             <div
                                 className="ml-auto flex flex-row gap-5
                     ">
-                                <button className="btn btn-error">supprimer</button>
                                 <button className="btn btn-primary" onClick={openUpdatePage}>
                                     {" "}
                                     ajouter <Plus />{" "}
@@ -130,7 +101,7 @@ export default function AgentPage() {
                         </div>
                     </div>
                     <div className="h-screen overflow-y-scroll p-5">
-                        <TableauAgent agents={agents} />
+                        <TableauAgent agents={agents} setAgents={setAgents} />
                     </div>
                 </div>
             )}
