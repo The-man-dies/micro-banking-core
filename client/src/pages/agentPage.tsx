@@ -32,11 +32,12 @@ export default function AgentPage() {
         { code_agents: 19, nom_prenom: "Awa Cissé", telephone: 66548912, adresse: "Yirimadio" },
         { code_agents: 20, nom_prenom: "Cheick Oumar Diakité", telephone: 73459876, adresse: "Korofina Nord" },
     ]);
-    const [update, setUpdate] = useState(false);
+    const [update, setUpdate] = useState<string | null>(null);
 
     const openUpdatePage = () => {
-        setUpdate(true);
+        setUpdate("add");
     };
+
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
@@ -63,11 +64,12 @@ export default function AgentPage() {
         setAgents(prev => [...prev, newAgents]);
         console.log(agents);
         e.currentTarget.reset();
-        setUpdate(false);
+        setUpdate(null);
     };
+
     return (
         <div>
-            {update ? (
+            {update === "add" ? (
                 <Addagents handleSubmit={handleSubmit} update={update} setUpdate={setUpdate} />
             ) : (
                 <div>
@@ -100,7 +102,7 @@ export default function AgentPage() {
                             </div>
                         </div>
                     </div>
-                    <div className="h-screen overflow-y-scroll p-5">
+                    <div className="h-screen overflow-y-hidden p-5">
                         <TableauAgent agents={agents} setAgents={setAgents} />
                     </div>
                 </div>

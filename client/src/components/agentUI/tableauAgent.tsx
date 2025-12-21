@@ -1,7 +1,7 @@
-import { Dock, Trash } from "lucide-react";
+import { DockIcon, Trash2Icon } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { data } from "react-router-dom";
+import UpdateAgents from "./updateAgent";
 
 type agentType = {
     code_agents: number;
@@ -17,6 +17,7 @@ type Props = {
 export default function TableauAgent({ agents, setAgents }: Props) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [agentToDelete, setAgentToDelete] = useState<number | null>(null);
+    const [modify, setModify] = useState<string | null>(null);
 
     const handleDelete = (code: number) => {
         setAgentToDelete(code);
@@ -36,45 +37,55 @@ export default function TableauAgent({ agents, setAgents }: Props) {
         setShowDeleteModal(false);
         setAgentToDelete(null);
     };
+    const getAgant = (data: number) => {
+        setModify("modify");
+        const modifyAgent = agents.filter(flt => flt.code_agents === data);
+        return modifyAgent;
+    };
+
     return (
         <div>
-            <div className="overflow-x-auto rounded-box border border-base-content/5 bg-base-100 mx-auto ">
-                <table className="table">
-                    {/* head */}
-                    <thead className="bg-indigo-600">
-                        <tr>
-                            <th>Code agents</th>
-                            <th>Nom Prénom</th>
-                            <th>Télephone</th>
-                            <th>Adresse</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {/* row 1 */}
-                        {agents.map(data => (
-                            <tr key={data.code_agents}>
-                                <th>{data.code_agents}</th>
-                                <td>{data.nom_prenom}</td>
-                                <td>{data.telephone}</td>
-                                <td>{data.adresse} </td>
-                                <td>
-                                    {" "}
-                                    <button className="btn btn-primary btn-xs ml-2">
-                                        <Dock />
-                                    </button>{" "}
-                                    <button
-                                        key={data.code_agents}
-                                        className="btn btn-error btn-xs ml-2"
-                                        onClick={() => handleDelete(data.code_agents)}>
-                                        <Trash />
-                                    </button>
-                                </td>
+            {modify === "modify" ? (
+                <UpdateAgents setModify={setModify} getAgant={getAgant} />
+            ) : (
+                <div className="overflow-x-auto rounded-box border border-base-content/5 bg-base-200 mx-auto h-168">
+                    <table className="table">
+                        {/* head */}
+                        <thead className="bg-indigo-600/40">
+                            <tr>
+                                <th>Code agents</th>
+                                <th>Nom Prénom</th>
+                                <th>Télephone</th>
+                                <th>Adresse</th>
+                                <th></th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {/* row 1 */}
+                            {agents.map(data => (
+                                <tr key={data.code_agents}>
+                                    <th>{data.code_agents}</th>
+                                    <td>{data.nom_prenom}</td>
+                                    <td>{data.telephone}</td>
+                                    <td>{data.adresse} </td>
+                                    <td className="flex flex-row gap-5">
+                                        {" "}
+                                        <button className="text-primary" onClick={() => getAgant(data.code_agents)}>
+                                            <DockIcon />
+                                        </button>{" "}
+                                        <button
+                                            key={data.code_agents}
+                                            className="text-error"
+                                            onClick={() => handleDelete(data.code_agents)}>
+                                            <Trash2Icon />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
             {showDeleteModal && (
                 <div className="modal modal-open">
                     <div className="modal-box">
