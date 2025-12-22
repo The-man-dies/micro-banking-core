@@ -9,19 +9,30 @@ type agentType = {
     telephone: number;
     adresse: string;
 };
+
 type Props = {
     agents: agentType[];
-    setAgents?: React.Dispatch<React.SetStateAction<agentType[]>>; // optionnel si tu veux modifier
+    setAgents?: React.Dispatch<React.SetStateAction<agentType[]>>;
 };
 
 export default function TableauAgent({ agents, setAgents }: Props) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [agentToDelete, setAgentToDelete] = useState<number | null>(null);
+    const [code, setCode] = useState<number | undefined>(undefined);
     const [modify, setModify] = useState<string | null>(null);
+    const [agentToModify, setAgentToModify] = useState<agentType | undefined>(undefined); // Nouvel état
 
     const handleDelete = (code: number) => {
         setAgentToDelete(code);
         setShowDeleteModal(true);
+    };
+
+    const handleModify = (code: number) => {
+        setCode(code);
+        // Trouver l'agent et le stocker dans l'état
+        const agent = agents.find(a => a.code_agents === code);
+        setAgentToModify(agent);
+        setModify("modify");
     };
 
     const confirmDelete = () => {
@@ -37,20 +48,19 @@ export default function TableauAgent({ agents, setAgents }: Props) {
         setShowDeleteModal(false);
         setAgentToDelete(null);
     };
-    const getAgant = (data: number) => {
-        setModify("modify");
-        const modifyAgent = agents.filter(flt => flt.code_agents === data);
-        return modifyAgent;
-    };
 
     return (
         <div>
-            {modify === "modify" ? (
-                <UpdateAgents setModify={setModify} getAgant={getAgant} />
+            {modify === "modify" && agentToModify ? (
+                <UpdateAgents
+                    setModify={setModify}
+                    agent={agentToModify} // Passer l'agent directement
+                    agents={agents}
+                    setAgents={setAgents}
+                />
             ) : (
                 <div className="overflow-x-auto rounded-box border border-base-content/5 bg-base-200 mx-auto h-168">
                     <table className="table">
-                        {/* head */}
                         <thead className="bg-indigo-600/40">
                             <tr>
                                 <th>Code agents</th>
@@ -61,7 +71,6 @@ export default function TableauAgent({ agents, setAgents }: Props) {
                             </tr>
                         </thead>
                         <tbody>
-                            {/* row 1 */}
                             {agents.map(data => (
                                 <tr key={data.code_agents}>
                                     <th>{data.code_agents}</th>
@@ -69,14 +78,10 @@ export default function TableauAgent({ agents, setAgents }: Props) {
                                     <td>{data.telephone}</td>
                                     <td>{data.adresse} </td>
                                     <td className="flex flex-row gap-5">
-                                        {" "}
-                                        <button className="text-primary" onClick={() => getAgant(data.code_agents)}>
+                                        <button className="text-primary" onClick={() => handleModify(data.code_agents)}>
                                             <DockIcon />
-                                        </button>{" "}
-                                        <button
-                                            key={data.code_agents}
-                                            className="text-error"
-                                            onClick={() => handleDelete(data.code_agents)}>
+                                        </button>
+                                        <button className="text-error" onClick={() => handleDelete(data.code_agents)}>
                                             <Trash2Icon />
                                         </button>
                                     </td>
