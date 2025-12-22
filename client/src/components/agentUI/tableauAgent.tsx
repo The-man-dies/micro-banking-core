@@ -1,4 +1,4 @@
-import { DockIcon, Trash2Icon } from "lucide-react";
+import { Edit, LocationEdit, Phone, Trash2Icon } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import UpdateAgents from "./updateAgent";
@@ -29,7 +29,7 @@ export default function TableauAgent({ agents, setAgents }: Props) {
 
     const handleModify = (code: number) => {
         setCode(code);
-        // Trouver l'agent et le stocker dans l'état
+
         const agent = agents.find(a => a.code_agents === code);
         setAgentToModify(agent);
         setModify("modify");
@@ -49,6 +49,14 @@ export default function TableauAgent({ agents, setAgents }: Props) {
         setAgentToDelete(null);
     };
 
+    const namePorfile = (name: string) => {
+        const newName = name.trim().split(" ");
+        console.log(newName);
+        const firstPart = newName[0][0];
+        const secondPart = newName[1] ? newName[1][0] : null;
+        return firstPart + secondPart;
+    };
+
     return (
         <div>
             {modify === "modify" && agentToModify ? (
@@ -61,29 +69,66 @@ export default function TableauAgent({ agents, setAgents }: Props) {
             ) : (
                 <div className="overflow-x-auto rounded-box border border-base-content/5 bg-base-200 mx-auto h-168">
                     <table className="table">
-                        <thead className="bg-indigo-600/40">
+                        <thead className="bg-slate-950/20 backdrop:blur-xl">
                             <tr>
                                 <th>Code agents</th>
                                 <th>Nom Prénom</th>
                                 <th>Télephone</th>
                                 <th>Adresse</th>
-                                <th></th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {agents.map(data => (
                                 <tr key={data.code_agents}>
                                     <th>{data.code_agents}</th>
-                                    <td>{data.nom_prenom}</td>
-                                    <td>{data.telephone}</td>
-                                    <td>{data.adresse} </td>
                                     <td className="flex flex-row gap-5">
-                                        <button className="text-primary" onClick={() => handleModify(data.code_agents)}>
-                                            <DockIcon />
-                                        </button>
-                                        <button className="text-error" onClick={() => handleDelete(data.code_agents)}>
-                                            <Trash2Icon />
-                                        </button>
+                                        <div className="avatar avatar-placeholder">
+                                            <div className="bg-indigo-600/15 text-neutral-content w-8 rounded-full">
+                                                <span className="text-xs font-bold">
+                                                    {" "}
+                                                    {namePorfile(data.nom_prenom)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-1">{data.nom_prenom}</div>
+                                    </td>
+                                    <td>
+                                        {" "}
+                                        <div className="flex flex-row gap-2">
+                                            <div className="text-zinc-100/50">
+                                                <Phone size={20} />
+                                            </div>{" "}
+                                            {data.telephone}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="flex flex-row gap-2">
+                                            <div className="text-zinc-100/50">
+                                                <LocationEdit size={20} />
+                                            </div>
+                                            {data.adresse}{" "}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="flex flex-row gap-5 ">
+                                            <button
+                                                className="text-zinc-100/50"
+                                                onClick={() => {
+                                                    handleModify(data.code_agents);
+                                                }}>
+                                                {" "}
+                                                <Edit size={20} />
+                                            </button>
+                                            <button
+                                                className="text-error"
+                                                onClick={() => {
+                                                    handleDelete(data.code_agents);
+                                                }}>
+                                                {" "}
+                                                <Trash2Icon size={20} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Filter, Plus, X } from "lucide-react";
 import TableauAgent from "../components/agentUI/tableauAgent";
 import React, { useState } from "react";
 import Addagents from "../components/agentUI/addagents";
@@ -73,36 +73,35 @@ export default function AgentPage() {
                 <Addagents handleSubmit={handleSubmit} update={update} setUpdate={setUpdate} />
             ) : (
                 <div>
-                    <div className="p-5">
-                        <div className="flex flex-row gap-5">
-                            <label className="input input-primary w-200 focus:border-0 ">
-                                <svg
-                                    className="h-[1em] opacity-50"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 24 24">
-                                    <g
-                                        strokeLinejoin="round"
-                                        strokeLinecap="round"
-                                        strokeWidth="2.5"
-                                        fill="none"
-                                        stroke="currentColor">
-                                        <circle cx="11" cy="11" r="8"></circle>
-                                        <path d="m21 21-4.3-4.3"></path>
-                                    </g>
-                                </svg>
-                                <input type="search" className="grow  " placeholder="Search" />
-                            </label>
-                            <div
-                                className="ml-auto flex flex-row gap-5
-                    ">
-                                <button className="btn btn-primary" onClick={openUpdatePage}>
-                                    {" "}
-                                    ajouter <Plus />{" "}
-                                </button>
-                            </div>
+                    <div className="p-5 flex flex-col gap-3 ">
+                        <button
+                            className="btn bg-indigo-600 rounded-lg w-40 text-sm h-9 ml-auto"
+                            onClick={openUpdatePage}>
+                            <Plus size={15} /> nouveaux agent
+                        </button>
+                        <div className="flex items-center gap-2  bg-slate-800   backdrop:blur-xl p-2 rounded-lg py-4">
+                            <input
+                                type="text"
+                                placeholder="Rechercher par nom, code, téléphone..."
+                                className="p-3 bg-slate-900 rounded-2xl focus:outline-none flex-1"
+                            />
+
+                            <button className="flex flex-row">
+                                <div className="text-zinc-100/50">
+                                    <Filter size={20} />
+                                </div>
+                                filtrer
+                            </button>
+
+                            <button className="flex flex-row">
+                                <div className="text-zinc-100/50">
+                                    <X size={20} />
+                                </div>
+                                renitialiser
+                            </button>
                         </div>
                     </div>
-                    <div className="h-screen overflow-y-hidden p-5">
+                    <div className="h-screen overflow-y-hidden p-5 -mt-6">
                         <TableauAgent agents={agents} setAgents={setAgents} />
                     </div>
                 </div>
