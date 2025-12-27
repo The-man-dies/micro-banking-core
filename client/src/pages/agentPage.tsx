@@ -1,7 +1,8 @@
-import { Plus } from "lucide-react";
+import { Filter, Plus, X } from "lucide-react";
 import TableauAgent from "../components/agentUI/tableauAgent";
 import React, { useState } from "react";
 import Addagents from "../components/agentUI/addagents";
+
 type agentType = {
     code_agents: number;
     nom_prenom: string;
@@ -32,75 +33,118 @@ export default function AgentPage() {
         { code_agents: 19, nom_prenom: "Awa Cissé", telephone: 66548912, adresse: "Yirimadio" },
         { code_agents: 20, nom_prenom: "Cheick Oumar Diakité", telephone: 73459876, adresse: "Korofina Nord" },
     ]);
-    const [update, setUpdate] = useState(false);
+
+    const [update, setUpdate] = useState<string | null>(null);
+
+    const getNextAvailableCode = () => {
+        if (agents.length === 0) return 1;
+
+        const maxCode = Math.max(...agents.map(agent => agent.code_agents));
+
+        for (let i = 1; i <= maxCode + 1; i++) {
+            if (!agents.some(agent => agent.code_agents === i)) {
+                return i;
+            }
+        }
+
+        return maxCode + 1;
+    };
 
     const openUpdatePage = () => {
-        setUpdate(true);
+        setUpdate("add");
     };
+
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
-        if (
-            formData.get("name") === "" ||
-            formData.get("code") === "" ||
-            formData.get("tel") === "" ||
-            formData.get("adresse") === ""
-        ) {
-            alert("remplie les champs");
+
+        // Récupération des valeurs
+        const code = Number(formData.get("code"));
+        const name = formData.get("name")?.toString().trim();
+        const tel = Number(formData.get("tel"));
+        const adresse = formData.get("adresse")?.toString().trim();
+
+        // Validation
+        if (!code || !name || !tel || !adresse) {
+            alert("Veuillez remplir tous les champs");
             return;
         }
-        const code = Number(formData.get("code"));
-        const name = formData.get("name")?.toString();
-        const tel = Number(formData.get("tel"));
-        const adresse = formData.get("adresse")?.toString();
-        console.log({ code, name, tel, adresse });
-        const newAgents = {
+
+        if (code <= 0) {
+            alert("Le code agent doit être un nombre positif");
+            return;
+        }
+
+        const codeExists = agents.some(agent => agent.code_agents === code);
+        if (codeExists) {
+            alert(`Le code agent ${code} existe déjà ! Veuillez utiliser un code unique.`);
+            return;
+        }
+
+        const phoneExists = agents.some(agent => agent.telephone === tel);
+        if (phoneExists) {
+            alert("Ce numéro de téléphone est déjà utilisé !");
+            return;
+        }
+
+        const newAgent = {
             code_agents: code,
-            nom_prenom: `${name}`,
+            nom_prenom: name,
             telephone: tel,
-            adresse: `${adresse}`,
+            adresse: adresse,
         };
-        setAgents(prev => [...prev, newAgents]);
-        console.log(agents);
+
+        setAgents(prev => {
+            const updatedAgents = [...prev, newAgent];
+
+            updatedAgents.sort((a, b) => a.code_agents - b.code_agents);
+            return updatedAgents;
+        });
+
         e.currentTarget.reset();
-        setUpdate(false);
+        setUpdate(null);
+
+        console.log("Nouvel agent ajouté avec succès:", newAgent);
     };
+
     return (
         <div>
-            {update ? (
-                <Addagents handleSubmit={handleSubmit} update={update} setUpdate={setUpdate} />
+            {update === "add" ? (
+                <Addagents
+                    handleSubmit={handleSubmit}
+                    update={update}
+                    setUpdate={setUpdate}
+                    nextCode={getNextAvailableCode()}
+                />
             ) : (
                 <div>
-                    <div className="p-5">
-                        <div className="flex flex-row gap-5">
-                            <label className="input input-primary w-200 focus:border-0 ">
-                                <svg
-                                    className="h-[1em] opacity-50"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 24 24">
-                                    <g
-                                        strokeLinejoin="round"
-                                        strokeLinecap="round"
-                                        strokeWidth="2.5"
-                                        fill="none"
-                                        stroke="currentColor">
-                                        <circle cx="11" cy="11" r="8"></circle>
-                                        <path d="m21 21-4.3-4.3"></path>
-                                    </g>
-                                </svg>
-                                <input type="search" className="grow  " placeholder="Search" />
-                            </label>
-                            <div
-                                className="ml-auto flex flex-row gap-5
-                    ">
-                                <button className="btn btn-primary" onClick={openUpdatePage}>
-                                    {" "}
-                                    ajouter <Plus />{" "}
-                                </button>
-                            </div>
+                    <div className="p-5 flex flex-col gap-3">
+                        <button
+                            className="btn bg-indigo-600 rounded-lg w-40 text-sm h-9 ml-auto flex items-center justify-center gap-2"
+                            onClick={openUpdatePage}>
+                            <Plus size={15} /> Nouvel agent
+                        </button>
+                        <div className="flex items-center gap-2 bg-slate-800 p-2 rounded-lg py-4">
+                            <input
+                                type="text"
+                                placeholder="Rechercher par nom, code, téléphone..."
+                                className="p-3 bg-slate-900 rounded-2xl focus:outline-none flex-1"
+                            />
+                            <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors">
+                                <div className="text-zinc-100/50">
+                                    <Filter size={20} />
+                                </div>
+                                Filtrer
+                            </button>
+                            <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors">
+                                <div className="text-zinc-100/50">
+                                    <X size={20} />
+                                </div>
+                                Réinitialiser
+                            </button>
                         </div>
                     </div>
-                    <div className="h-screen overflow-y-scroll p-5">
+                    <div className="h-screen overflow-y-hidden p-5 -mt-6">
                         <TableauAgent agents={agents} setAgents={setAgents} />
                     </div>
                 </div>
