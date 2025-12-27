@@ -31,12 +31,12 @@ export function SidebarItem() {
                 {/** En tête */}
 
                 {/** sidebar */}
-                <nav>
-                    <NavLink to={"/"}>
+                <nav className="flex flex-col gap-3">
+                    <NavLink to={"/dashboard"}>
                         <button
-                            onClick={() => setActive("dashborad")}
+                            onClick={() => setActive("dashboard")}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active === "dashborad"
+                                active === "dashboard"
                                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
                                     : "text-slate-400 hover:bg-slate-800 hover:text-white"
                             }`}>
