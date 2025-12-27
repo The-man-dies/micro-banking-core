@@ -34,378 +34,167 @@ All authentication endpoints are prefixed with `/api/v1/admin`.
 
 ### 2. Authentication Flow
 
-
-
 #### A. Initial Login
-
-
 
 To log in, make a POST request to the `/api/v1/admin/login` endpoint. Store the `accessToken` and `refreshToken` received in the response.
 
-
-
 ```javascript
-
 // Example using fetch
-
 async function login(username, password) {
-
   try {
-
     const response = await fetch('/api/v1/admin/login', {
-
       method: 'POST',
-
       headers: {
-
         'Content-Type': 'application/json',
-
       },
-
       body: JSON.stringify({ username, password }),
-
     });
-
     const data = await response.json();
-
     if (data.success) {
-
       localStorage.setItem('accessToken', data.data.accessToken);
-
       localStorage.setItem('refreshToken', data.data.refreshToken);
-
       console.log('Login successful!');
-
     } else {
-
       console.error('Login failed:', data.message);
-
     }
-
   } catch (error) {
-
     console.error('Network error during login:', error);
-
   }
-
 }
 
-
-
 // Example usage:
-
 // login('your_admin_username', 'your_admin_password');
-
 ```
-
-
 
 #### B. Accessing Protected Routes
 
-
-
 For any API endpoint that requires authentication, include the `accessToken` in the `x-auth-token` header.
 
-
-
 ```javascript
-
 // Example using fetch to access a protected route
-
 async function getProtectedData() {
-
   const accessToken = localStorage.getItem('accessToken');
-
   if (!accessToken) {
-
     console.error('No access token found. Please log in.');
-
     return;
-
   }
-
-
 
   try {
-
     const response = await fetch('/api/v1/admin/profile', { // Example protected route
-
       method: 'GET',
-
       headers: {
-
         'x-auth-token': accessToken,
-
       },
-
     });
-
     if (response.ok) {
-
       const data = await response.json();
-
       console.log('Protected data:', data);
-
     } else if (response.status === 401 || response.status === 403) {
-
       console.warn('Access token expired or invalid. Attempting to refresh...');
-
       // Implement token refresh logic here
-
     } else {
-
       console.error('Failed to fetch protected data:', response.statusText);
-
     }
-
   } catch (error) {
-
     console.error('Network error fetching protected data:', error);
-
   }
-
 }
 
-
-
 // Example usage:
-
 // getProtectedData();
-
 ```
-
-
 
 #### C. Refreshing Access Token
 
-
-
 When an `accessToken` expires, use the `refreshToken` to obtain a new one without requiring the user to re-enter credentials.
 
-
-
 ```javascript
-
 // Example using fetch to refresh token
-
 async function refreshAccessToken() {
-
   const refreshToken = localStorage.getItem('refreshToken');
-
   if (!refreshToken) {
-
     console.error('No refresh token found. Please log in.');
-
     return null;
-
   }
-
-
 
   try {
-
     const response = await fetch('/api/v1/admin/refresh', {
-
       method: 'POST',
-
       headers: {
-
         'Content-Type': 'application/json',
-
       },
-
       body: JSON.stringify({ token: refreshToken }),
-
     });
-
     const data = await response.json();
-
     if (data.success) {
-
       localStorage.setItem('accessToken', data.data.accessToken);
-
       console.log('Access token refreshed successfully!');
-
       return data.data.accessToken;
-
     } else {
-
       console.error('Failed to refresh token:', data.message);
-
       // Potentially clear tokens and force re-login if refresh token is invalid
-
       localStorage.removeItem('accessToken');
-
       localStorage.removeItem('refreshToken');
-
     }
-
   } catch (error) {
-
     console.error('Network error during token refresh:', error);
-
   }
-
   return null;
-
 }
 
-
-
 // Example usage (integrate with protected route logic):
-
 // async function getProtectedDataWithRefresh() {
-
 //   let accessToken = localStorage.getItem('accessToken');
-
 //   // Try initial fetch
-
 //   const response = await fetch('/api/v1/admin/profile', { /* ... */ });
-
 //   if (response.status === 401 || response.status === 403) {
-
 //     accessToken = await refreshAccessToken();
-
 //     if (accessToken) {
-
 //       // Retry fetch with new token
-
 //       const retryResponse = await fetch('/api/v1/admin/profile', { /* ... new token */ });
-
 //       // ... handle retry response
-
 //     }
-
 //   }
-
 //   // ...
-
 // }
-
 ```
-
-
 
 #### D. Logout
 
-
-
 To log out, send a POST request to the `/api/v1/admin/logout` endpoint with the `refreshToken`. After a successful logout, clear all stored tokens from the frontend.
 
-
-
 ```javascript
-
 // Example using fetch to logout
-
 async function logout() {
-
   const refreshToken = localStorage.getItem('refreshToken');
-
   if (!refreshToken) {
-
     console.warn('No refresh token found. Already logged out or session expired.');
-
     return;
-
   }
-
-
 
   try {
-
     const response = await fetch('/api/v1/admin/logout', {
-
       method: 'POST',
-
       headers: {
-
         'Content-Type': 'application/json',
-
       },
-
       body: JSON.stringify({ token: refreshToken }),
-
     });
-
     const data = await response.json();
-
     if (data.success) {
-
       console.log('Logout successful!');
-
     } else {
-
       console.error('Logout failed:', data.message);
-
     }
-
   } catch (error) {
-
     console.error('Network error during logout:', error);
-
   } finally {
-
     localStorage.removeItem('accessToken');
-
     localStorage.removeItem('refreshToken');
-
     console.log('All tokens cleared.');
-
   }
-
 }
 
-
-
 // Example usage:
-
 // logout();
-
 ```
-
-
-
-### Core API Endpoints
-
-
-
-Beyond admin authentication, the backend provides endpoints for managing Agents, Tickets, and Clients. All these endpoints require a valid admin `accessToken` in the `x-auth-token` header.
-
-
-
-#### Agent Management (`/api/v1/agents`)
-
-*   **CRUD Operations:** Supports creating, retrieving (all or by ID), updating, and deleting agent records.
-
-*   **Access:** Private (Admin)
-
-
-
-#### Ticket Management (`/api/v1/tickets`)
-
-*   **CRUD Operations:** Supports creating, retrieving (all or by ID), updating, and deleting ticket records.
-
-*   **Relationship:** Each ticket is uniquely associated with a client.
-
-*   **Access:** Private (Admin)
-
-
-
-#### Client Management (`/api/v1/clients`)
-
-*   **CRUD Operations:** Supports creating, retrieving (all or by ID), updating, and deleting client records.
-
-*   **Relationships:** Clients are registered by an agent and have a unique associated ticket.
-
-*   **Account Logic:**
-
-    *   **`POST /api/v1/clients/:id/renew`**: Renews a client's account for 30 days if sufficient `accountBalance` is available (deducts `initialDeposit`).
-
-    *   **`POST /api/v1/clients/:id/deposit`**: Deposits funds into a client's account. Deposits are blocked if the account is expired.
-
-*   **Access:** Private (Admin)
-
-
-
-For detailed request/response schemas and examples, refer to the API documentation within the `client/README.md`.
