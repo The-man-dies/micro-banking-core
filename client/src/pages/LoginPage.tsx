@@ -14,13 +14,9 @@ const LoginPage = () => {
         setIsLoading(true);
 
         try {
-            // Simulate API call
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            // For demo purposes, accept any non-empty credentials
             if (email && password) {
-                // In a real app, you would validate credentials with your backend
-                // and store the authentication token
                 localStorage.setItem("isAuthenticated", "true");
                 navigate("/dashboard");
             } else {

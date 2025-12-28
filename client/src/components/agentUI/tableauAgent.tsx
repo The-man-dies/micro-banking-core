@@ -63,7 +63,7 @@ export default function TableauAgent({ agents, setAgents }: Props) {
             {modify === "modify" && agentToModify ? (
                 <UpdateAgents setModify={setModify} agent={agentToModify} agents={agents} setAgents={setAgents} />
             ) : (
-                <div className="rounded-box border border-base-content/5 bg-base-200 mx-auto h-[calc(100vh-180px)]">
+                <div className="rounded-box border border-base-content/5 bg-base-200 mx-auto ">
                     <table className="table table-zebra">
                         <thead className="bg-slate-900 text-slate-100">
                             <tr>
