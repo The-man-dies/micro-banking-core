@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Users, ArrowRightLeft, Wallet, LogOut, ShieldCheck } from "lucide-react";
 
 export function SidebarItem() {
+    const navigate = useNavigate();
     const [active, setActive] = useState<string>(() => {
         const saved = localStorage.getItem("active");
         return saved ? JSON.parse(saved) : "";
@@ -11,6 +12,11 @@ export function SidebarItem() {
     useEffect(() => {
         localStorage.setItem("active", JSON.stringify(active));
     }, [active]);
+
+    const handleLogout = () => {
+        localStorage.removeItem("isAuthenticated");
+        navigate("/login");
+    };
 
     return (
         <div>
@@ -31,12 +37,12 @@ export function SidebarItem() {
                 {/** En tête */}
 
                 {/** sidebar */}
-                <nav>
-                    <NavLink to={"/"}>
+                <nav className="flex flex-col gap-3">
+                    <NavLink to={"/dashboard"}>
                         <button
-                            onClick={() => setActive("dashborad")}
+                            onClick={() => setActive("dashboard")}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active === "dashborad"
+                                active === "dashboard"
                                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
                                     : "text-slate-400 hover:bg-slate-800 hover:text-white"
                             }`}>
@@ -105,7 +111,9 @@ export function SidebarItem() {
                                 <p className="text-xs text-slate-400">Superviseur</p>
                             </div>
                         </div>
-                        <button className="w-full flex items-center justify-center gap-2 text-rose-400 hover:bg-rose-500/10 p-2 rounded-lg transition-colors text-sm font-medium">
+                        <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center justify-center gap-2 text-rose-400 hover:bg-rose-500/10 p-2 rounded-lg transition-colors text-sm font-medium">
                             <LogOut size={16} /> Déconnexion
                         </button>
                     </div>
