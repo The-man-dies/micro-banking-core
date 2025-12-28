@@ -13,7 +13,7 @@ const DashboardPage = () => {
     const totalAmount = "32.4M FCFA";
 
     return (
-        <div className="p-6 bg-gray-900 min-h-screen overflow-y-scroll">
+        <div className="p-6 bg-gray-900 min-h-screen ">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
                 <div className="mb-4 md:mb-0">
                     <h1 className="text-2xl font-bold text-white">Tableau de Bord</h1>
