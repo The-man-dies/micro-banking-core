@@ -20,8 +20,6 @@ export function SidebarItem() {
 
     return (
         <div>
-            {/** En tête */}
-
             <div
                 className={`flex flex-col overflow-hidden h-screen bg-slate-900 border-r border-slate-800 w-64 p-4 z-50 transition-transform duration-300`}>
                 <div className="flex items-center gap-3 px-2 mb-10 mt-2">
@@ -34,9 +32,6 @@ export function SidebarItem() {
                     </div>
                 </div>
 
-                {/** En tête */}
-
-                {/** sidebar */}
                 <nav className="flex flex-col gap-3">
                     <NavLink to={"/dashboard"}>
                         <button
