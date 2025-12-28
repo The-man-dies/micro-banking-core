@@ -36,8 +36,45 @@ export const initializeDatabase = async () => {
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
-
         logger.info('Admin table is ready.');
+
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS Agent (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                firstname TEXT NOT NULL,
+                lastname TEXT NOT NULL,
+                email TEXT,
+                location TEXT
+            )
+        `);
+        logger.info('Agent table is ready.');
+
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS Client (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                firstname TEXT NOT NULL,
+                lastname TEXT NOT NULL,
+                email TEXT,
+                agentId INTEGER NOT NULL,
+                accountBalance REAL NOT NULL DEFAULT 0,
+                accountExpiresAt TEXT NOT NULL,
+                initialDeposit REAL NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'active',
+                FOREIGN KEY (agentId) REFERENCES Agent(id)
+            )
+        `);
+        logger.info('Client table is ready.');
+
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS Ticket (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                description TEXT,
+                status TEXT NOT NULL,
+                clientId INTEGER NOT NULL UNIQUE,
+                FOREIGN KEY (clientId) REFERENCES Client(id)
+            )
+        `);
+        logger.info('Ticket table is ready.');
     } catch (error) {
         logger.error('Database initialization failed:', { error });
         throw error; // Re-throw the error to be caught by the caller
