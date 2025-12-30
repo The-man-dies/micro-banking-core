@@ -33,168 +33,56 @@ All authentication endpoints are prefixed with `/api/v1/admin`.
     *   **Response**: `{ "success": true, "message": "Token is valid", "data": { "user": { "id": 1, "username": "admin" }, "expiresAt": "...", "expiresIn": ... } }`
 
 ### 2. Authentication Flow
+(Le reste du guide d'authentification reste inchangé)
 
-#### A. Initial Login
 
-To log in, make a POST request to the `/api/v1/admin/login` endpoint. Store the `accessToken` and `refreshToken` received in the response.
+## Gestion des Clients (API)
 
-```javascript
-// Example using fetch
-async function login(username, password) {
-  try {
-    const response = await fetch('/api/v1/admin/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await response.json();
-    if (data.success) {
-      localStorage.setItem('accessToken', data.data.accessToken);
-      localStorage.setItem('refreshToken', data.data.refreshToken);
-      console.log('Login successful!');
-    } else {
-      console.error('Login failed:', data.message);
+Les routes de l'API pour la gestion des clients sont préfixées par `/api/v1/clients`. Toutes ces routes nécessitent une authentification via le header `x-auth-token`.
+
+### 1. Créer un nouveau client
+
+*   **URL** : `POST /api/v1/clients`
+*   **Description** : Crée un nouveau client, son ticket initial, et enregistre la transaction des frais d'inscription. Le solde du client commence à 0.
+*   **Body (JSON)** :
+    ```json
+    {
+      "firstname": "John",
+      "lastname": "Doe",
+      "email": "john.doe@example.com",
+      "agentId": 1,
+      "montantEngagement": 1000
     }
-  } catch (error) {
-    console.error('Network error during login:', error);
-  }
-}
+    ```
+*   **Réponse de succès** : `{ "success": true, "message": "Client created successfully", "data": { "client": { ... } } }`
 
-// Example usage:
-// login('your_admin_username', 'your_admin_password');
-```
+### 2. Effectuer un dépôt sur un compte client
 
-#### B. Accessing Protected Routes
-
-For any API endpoint that requires authentication, include the `accessToken` in the `x-auth-token` header.
-
-```javascript
-// Example using fetch to access a protected route
-async function getProtectedData() {
-  const accessToken = localStorage.getItem('accessToken');
-  if (!accessToken) {
-    console.error('No access token found. Please log in.');
-    return;
-  }
-
-  try {
-    const response = await fetch('/api/v1/admin/profile', { // Example protected route
-      method: 'GET',
-      headers: {
-        'x-auth-token': accessToken,
-      },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Protected data:', data);
-    } else if (response.status === 401 || response.status === 403) {
-      console.warn('Access token expired or invalid. Attempting to refresh...');
-      // Implement token refresh logic here
-    } else {
-      console.error('Failed to fetch protected data:', response.statusText);
+*   **URL** : `POST /api/v1/clients/:id/deposit`
+*   **Description** : Ajoute un montant au solde (`accountBalance`) du client et enregistre une transaction de type "Depot".
+*   **Body (JSON)** :
+    ```json
+    {
+      "amount": 500
     }
-  } catch (error) {
-    console.error('Network error fetching protected data:', error);
-  }
-}
+    ```
+*   **Réponse de succès** : `{ "success": true, "message": "Deposit successful", "data": { "newBalance": 500 } }`
 
-// Example usage:
-// getProtectedData();
-```
+### 3. Renouveler un compte client
 
-#### C. Refreshing Access Token
-
-When an `accessToken` expires, use the `refreshToken` to obtain a new one without requiring the user to re-enter credentials.
-
-```javascript
-// Example using fetch to refresh token
-async function refreshAccessToken() {
-  const refreshToken = localStorage.getItem('refreshToken');
-  if (!refreshToken) {
-    console.error('No refresh token found. Please log in.');
-    return null;
-  }
-
-  try {
-    const response = await fetch('/api/v1/admin/refresh', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token: refreshToken }),
-    });
-    const data = await response.json();
-    if (data.success) {
-      localStorage.setItem('accessToken', data.data.accessToken);
-      console.log('Access token refreshed successfully!');
-      return data.data.accessToken;
-    } else {
-      console.error('Failed to refresh token:', data.message);
-      // Potentially clear tokens and force re-login if refresh token is invalid
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+*   **URL** : `POST /api/v1/clients/:id/renew`
+*   **Description** : Réactive un compte pour 30 jours, met à jour le montant d'engagement du client, et enregistre une transaction de type "FraisReactivation".
+*   **Body (JSON)** :
+    ```json
+    {
+      "fraisReactivation": 1200
     }
-  } catch (error) {
-    console.error('Network error during token refresh:', error);
-  }
-  return null;
-}
+    ```
+*   **Réponse de succès** : `{ "success": true, "message": "Account renewed successfully", "data": { "clientId": "..." } }`
 
-// Example usage (integrate with protected route logic):
-// async function getProtectedDataWithRefresh() {
-//   let accessToken = localStorage.getItem('accessToken');
-//   // Try initial fetch
-//   const response = await fetch('/api/v1/admin/profile', { /* ... */ });
-//   if (response.status === 401 || response.status === 403) {
-//     accessToken = await refreshAccessToken();
-//     if (accessToken) {
-//       // Retry fetch with new token
-//       const retryResponse = await fetch('/api/v1/admin/profile', { /* ... new token */ });
-//       // ... handle retry response
-//     }
-//   }
-//   // ...
-// }
-```
+### 4. Effectuer le retrait du solde d'un client (Payout)
 
-#### D. Logout
-
-To log out, send a POST request to the `/api/v1/admin/logout` endpoint with the `refreshToken`. After a successful logout, clear all stored tokens from the frontend.
-
-```javascript
-// Example using fetch to logout
-async function logout() {
-  const refreshToken = localStorage.getItem('refreshToken');
-  if (!refreshToken) {
-    console.warn('No refresh token found. Already logged out or session expired.');
-    return;
-  }
-
-  try {
-    const response = await fetch('/api/v1/admin/logout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token: refreshToken }),
-    });
-    const data = await response.json();
-    if (data.success) {
-      console.log('Logout successful!');
-    } else {
-      console.error('Logout failed:', data.message);
-    }
-  } catch (error) {
-    console.error('Network error during logout:', error);
-  } finally {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    console.log('All tokens cleared.');
-  }
-}
-
-// Example usage:
-// logout();
-```
+*   **URL** : `POST /api/v1/clients/:id/payout`
+*   **Description** : Vide le solde du client (`accountBalance` passe à 0), marque son compte comme "expired", et enregistre une transaction de type "Retrait".
+*   **Body** : Aucun
+*   **Réponse de succès** : `{ "success": true, "message": "Client account paid out successfully", "data": { "clientId": "...", "amountPaidOut": "..." } }`

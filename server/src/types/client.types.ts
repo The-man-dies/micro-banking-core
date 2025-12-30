@@ -1,15 +1,13 @@
-// server/src/types/client.types.ts
-
 export type ClientType = {
-  id: string;
+  id: number;
   firstname: string;
   lastname: string;
   email?: string;
-  agentId: string;
+  agentId: number;
   accountBalance: number;
+  montantEngagement: number;
   accountExpiresAt: string; // ISO 8601 format
-  initialDeposit: number;
   status: 'active' | 'expired';
 };
 
-export type ClientDto = Omit<ClientType, 'id' | 'accountExpiresAt' | 'accountBalance' | 'status'>;
+export type ClientDto = Omit<ClientType, 'id' | 'status'>;

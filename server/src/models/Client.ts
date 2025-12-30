@@ -3,74 +3,70 @@ import logger from "../config/logger";
 import { getDbConnection } from "../services/database";
 import { ClientType, ClientDto } from '../types/client.types';
 
-export interface ClientModel {
-    create(client: ClientDto, db: Database): Promise<ClientType>; // Pass db for transactions
-    findById(id: string): Promise<ClientType | null>;
-    update(id: string, client: Partial<ClientType>): Promise<ClientType | null>;
-    delete(id: string): Promise<boolean>;
+export interface IClientModel {
+    create(client: Partial<ClientDto>, db: Database): Promise<ClientType>;
+    findById(id: string | number, db?: Database): Promise<ClientType | null>;
+    update(id: string | number, client: Partial<ClientType>, db?: Database): Promise<ClientType | null>;
+    delete(id: string | number, db?: Database): Promise<boolean>;
 }
 
-class Client implements ClientModel {
-    public async create(client: ClientDto, db: Database): Promise<ClientType> {
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 30);
-        const status = 'active';
+class ClientModel implements IClientModel {
+    
+    private async getConnection(db?: Database): Promise<Database> {
+        return db || getDbConnection();
+    }
 
+    public async create(client: Partial<ClientDto>, db: Database): Promise<ClientType> {
         const result = await db.run(
-            `INSERT INTO Client (firstname, lastname, email, agentId, accountBalance, accountExpiresAt, initialDeposit, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO Client (firstname, lastname, email, agentId, accountBalance, montantEngagement, accountExpiresAt, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             client.firstname,
             client.lastname,
             client.email || null,
             client.agentId,
-            0, // Initial balance
-            expiresAt.toISOString(),
-            client.initialDeposit,
-            status
+            client.accountBalance,
+            client.montantEngagement,
+            client.accountExpiresAt,
+            client.status
         );
 
-        return {
-            id: result.lastID!.toString(),
-            accountBalance: 0,
-            accountExpiresAt: expiresAt.toISOString(),
-            status: status,
-            ...client
-        };
+        const created = await this.findById(result.lastID!, db);
+        if (!created) throw new Error("Failed to create or find client after insertion.");
+        return created;
     }
 
-    public async findById(id: string): Promise<ClientType | null> {
-        const db = await getDbConnection();
-        const row = await db.get(`SELECT * FROM Client WHERE id = ?`, id);
-        if (!row) return null;
-        return row as ClientType;
+    public async findById(id: string | number, db?: Database): Promise<ClientType | null> {
+        const conn = await this.getConnection(db);
+        const row = await conn.get<ClientType>(`SELECT * FROM Client WHERE id = ?`, id);
+        return row || null;
     }
 
-    public async update(id: string, client: Partial<ClientType>): Promise<ClientType | null> {
-        const db = await getDbConnection();
-        const existing = await this.findById(id);
+    public async update(id: string | number, client: Partial<ClientType>, db?: Database): Promise<ClientType | null> {
+        const conn = await this.getConnection(db);
+        const existing = await this.findById(id, conn);
         if (!existing) return null;
 
         const updatedClient = { ...existing, ...client };
 
-        await db.run(
-            `UPDATE Client SET firstname = ?, lastname = ?, email = ?, agentId = ?, accountBalance = ?, accountExpiresAt = ?, initialDeposit = ?, status = ? WHERE id = ?`,
+        await conn.run(
+            `UPDATE Client SET firstname = ?, lastname = ?, email = ?, agentId = ?, accountBalance = ?, montantEngagement = ?, accountExpiresAt = ?, status = ? WHERE id = ?`,
             updatedClient.firstname,
             updatedClient.lastname,
             updatedClient.email,
             updatedClient.agentId,
             updatedClient.accountBalance,
+            updatedClient.montantEngagement,
             updatedClient.accountExpiresAt,
-            updatedClient.initialDeposit,
             updatedClient.status,
             id
         );
-        return updatedClient;
+        return this.findById(id, conn);
     }
 
-    public async delete(id: string): Promise<boolean> {
-        const db = await getDbConnection();
-        const result = await db.run(`DELETE FROM Client WHERE id = ?`, id);
-        return result.changes! > 0;
+    public async delete(id: string | number, db?: Database): Promise<boolean> {
+        const conn = await this.getConnection(db);
+        const result = await conn.run(`DELETE FROM Client WHERE id = ?`, id);
+        return (result.changes ?? 0) > 0;
     }
 }
 
-export default new Client();
+export default new ClientModel();

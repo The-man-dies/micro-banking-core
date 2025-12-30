@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createClient, getClientById, getAllClients, updateClient, deleteClient, renewAccount, depositToAccount } from '../controllers/client.controller';
+import { createClient, getClientById, getAllClients, updateClient, deleteClient, renewAccount, depositToAccount, payoutClientAccount } from '../controllers/client.controller';
 import { protect } from '../middleware/auth.middleware';
 import { checkAccountStatus } from '../middleware/checkAccountStatus';
 
@@ -14,6 +14,7 @@ router.get('/', getAllClients);
 // Routes with account status check
 router.post('/:id/renew', checkAccountStatus, renewAccount);
 router.post('/:id/deposit', checkAccountStatus, depositToAccount);
+router.post('/:id/payout', checkAccountStatus, payoutClientAccount);
 
 router.get('/:id', getClientById);
 router.put('/:id', updateClient);

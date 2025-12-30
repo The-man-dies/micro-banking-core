@@ -57,8 +57,8 @@ export const initializeDatabase = async () => {
                 email TEXT,
                 agentId INTEGER NOT NULL,
                 accountBalance REAL NOT NULL DEFAULT 0,
+                montantEngagement REAL NOT NULL DEFAULT 0,
                 accountExpiresAt TEXT NOT NULL,
-                initialDeposit REAL NOT NULL DEFAULT 0,
                 status TEXT NOT NULL DEFAULT 'active',
                 FOREIGN KEY (agentId) REFERENCES Agent(id)
             )
@@ -70,11 +70,25 @@ export const initializeDatabase = async () => {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 description TEXT,
                 status TEXT NOT NULL,
-                clientId INTEGER NOT NULL UNIQUE,
+                clientId INTEGER NOT NULL,
                 FOREIGN KEY (clientId) REFERENCES Client(id)
             )
         `);
         logger.info('Ticket table is ready.');
+
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS Transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                clientId INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                type TEXT NOT NULL CHECK(type IN ('FraisInscription', 'FraisReactivation', 'Depot', 'Retrait')),
+                description TEXT,
+                createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (clientId) REFERENCES Client(id)
+            )
+        `);
+        logger.info('Transactions table is ready.');
+
     } catch (error) {
         logger.error('Database initialization failed:', { error });
         throw error; // Re-throw the error to be caught by the caller
