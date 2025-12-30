@@ -2,9 +2,10 @@ import { Response } from 'express';
 import { ApiResponse } from '../utils/response.handler';
 import logger from '../config/logger';
 import { AuthRequest } from '../types/express.d';
-import Client, { ClientDto } from '../models/Client';
+import Client from '../models/Client';
 import Ticket from '../models/Ticket';
 import { getDbConnection } from '../services/database';
+import { ClientDto, ClientType } from '../types/client.types';
 
 export const createClient = async (req: AuthRequest, res: Response) => {
     const db = await getDbConnection();

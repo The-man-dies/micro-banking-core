@@ -1,6 +1,6 @@
-import { Filter, Plus, X } from "lucide-react";
+import { Filter, Plus, X, Search } from "lucide-react";
 import TableauAgent from "../components/agentUI/tableauAgent";
-import React, { useState } from "react";
+import { useState } from "react";
 import Addagents from "../components/agentUI/addagents";
 
 type agentType = {
@@ -35,36 +35,29 @@ export default function AgentPage() {
     ]);
 
     const [update, setUpdate] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const getNextAvailableCode = () => {
         if (agents.length === 0) return 1;
-
         const maxCode = Math.max(...agents.map(agent => agent.code_agents));
-
         for (let i = 1; i <= maxCode + 1; i++) {
             if (!agents.some(agent => agent.code_agents === i)) {
                 return i;
             }
         }
-
         return maxCode + 1;
     };
 
-    const openUpdatePage = () => {
-        setUpdate("add");
-    };
+    const openUpdatePage = () => setUpdate("add");
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
-
-        // Récupération des valeurs
         const code = Number(formData.get("code"));
         const name = formData.get("name")?.toString().trim();
         const tel = Number(formData.get("tel"));
         const adresse = formData.get("adresse")?.toString().trim();
 
-        // Validation
         if (!code || !name || !tel || !adresse) {
             alert("Veuillez remplir tous les champs");
             return;
@@ -96,19 +89,24 @@ export default function AgentPage() {
 
         setAgents(prev => {
             const updatedAgents = [...prev, newAgent];
-
             updatedAgents.sort((a, b) => a.code_agents - b.code_agents);
             return updatedAgents;
         });
 
         e.currentTarget.reset();
         setUpdate(null);
-
-        console.log("Nouvel agent ajouté avec succès:", newAgent);
     };
 
+    const filteredAgents = agents.filter(
+        agent =>
+            agent.nom_prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            agent.telephone.toString().includes(searchTerm) ||
+            agent.adresse.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            agent.code_agents.toString().includes(searchTerm)
+    );
+
     return (
-        <div>
+        <div className="p-4 md:p-6 bg-gray-900 min-h-screen overflow-x-hidden">
             {update === "add" ? (
                 <Addagents
                     handleSubmit={handleSubmit}
@@ -117,35 +115,60 @@ export default function AgentPage() {
                     nextCode={getNextAvailableCode()}
                 />
             ) : (
-                <div>
-                    <div className="p-5 flex flex-col gap-3">
+                <div className="space-y-4 md:space-y-6">
+                    {/* En-tête */}
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <h1 className="text-xl md:text-2xl font-bold text-white">Gestion des agents</h1>
+                            <p className="text-sm md:text-base text-gray-400">Liste de tous les agents enregistrés</p>
+                        </div>
                         <button
-                            className="btn bg-indigo-600 rounded-lg w-40 text-sm h-9 ml-auto flex items-center justify-center gap-2"
-                            onClick={openUpdatePage}>
-                            <Plus size={15} /> Nouvel agent
+                            onClick={openUpdatePage}
+                            className="flex items-center justify-center gap-2 px-3 py-2 md:px-4 md:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors w-full md:w-auto">
+                            <Plus size={18} />
+                            <span>Nouvel agent</span>
                         </button>
-                        <div className="flex items-center gap-2 bg-slate-800 p-2 rounded-lg py-4">
-                            <input
-                                type="text"
-                                placeholder="Rechercher par nom, code, téléphone..."
-                                className="p-3 bg-slate-900 rounded-2xl focus:outline-none flex-1"
-                            />
-                            <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors">
-                                <div className="text-zinc-100/50">
-                                    <Filter size={20} />
+                    </div>
+
+                    {/* Barre de recherche et filtres */}
+                    <div className="bg-gray-800/50 rounded-xl p-3 md:p-4 border border-gray-700">
+                        <div className="flex flex-col md:flex-row gap-3">
+                            <div className="relative flex-1">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Search className="h-5 w-5 text-gray-400" />
                                 </div>
-                                Filtrer
-                            </button>
-                            <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors">
-                                <div className="text-zinc-100/50">
-                                    <X size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Rechercher un agent..."
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    className="block w-full pl-10 pr-3 py-2 border border-gray-600 rounded-lg bg-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2">
+                                    <Filter className="h-4 w-4 text-gray-400" />
+                                    <select
+                                        className="bg-transparent text-white text-sm focus:outline-none focus:ring-0 border-0 p-0"
+                                        aria-label="Filtrer par statut">
+                                        <option>Tous les statuts</option>
+                                        <option>Actif</option>
+                                        <option>Inactif</option>
+                                    </select>
                                 </div>
-                                Réinitialiser
-                            </button>
+                                <button
+                                    onClick={() => setSearchTerm("")}
+                                    className="px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg border border-gray-600 transition-colors flex items-center gap-2">
+                                    <X size={16} />
+                                    <span className="hidden sm:inline">Réinitialiser</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div className="h-screen overflow-y-hidden p-5 -mt-6">
-                        <TableauAgent agents={agents} setAgents={setAgents} />
+
+                    {/* Tableau des agents */}
+                    <div className="bg-gray-800/50 rounded-xl overflow-hidden border border-gray-700">
+                        <TableauAgent agents={filteredAgents} setAgents={setAgents} />
                     </div>
                 </div>
             )}

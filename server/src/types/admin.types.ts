@@ -6,10 +6,13 @@ export interface JwtAdminPayload extends JwtPayload {
     username: string;
 }
 
-export interface Admin {
+export interface AdminType {
     id: number;
     username: string;
     password: string;
     refreshToken?: string | null;
     createdAt?: string;
 }
+
+// DTO for creating a new admin
+export type AdminDto = Pick<AdminType, 'username' | 'password'>;
