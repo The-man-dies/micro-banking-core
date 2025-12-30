@@ -10,7 +10,7 @@
     "create-admin": "ts-node src/scripts/createAdmin.ts"
   },
   "keywords": [],
-  "author": "",
+  "author": "Dioamn keita",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
