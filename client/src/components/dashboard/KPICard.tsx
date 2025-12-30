@@ -29,7 +29,8 @@ export const KPICard: React.FC<KPICardProps> = ({ title, value, icon, trend, tre
     };
 
     return (
-        <div className={`p-6 rounded-xl bg-gray-800 border border-gray-700 shadow-lg ${className}`}>
+        <div
+            className={` "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:border-slate-300 dark:hover:border-slate-600 transition-al shadow-lg ${className}`}>
             <div className="flex justify-between items-start">
                 <div>
                     <p className="text-sm font-medium text-gray-400">{title}</p>

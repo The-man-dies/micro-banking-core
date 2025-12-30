@@ -63,21 +63,31 @@ export default function TableauAgent({ agents, setAgents }: Props) {
             {modify === "modify" && agentToModify ? (
                 <UpdateAgents setModify={setModify} agent={agentToModify} agents={agents} setAgents={setAgents} />
             ) : (
-                <div className="rounded-box border border-base-content/5 bg-base-200 mx-auto ">
-                    <table className="table table-zebra">
-                        <thead className="bg-slate-900 text-slate-100">
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl  ">
+                    <table className="table ">
+                        <thead className="bg-slate-50 dark:bg-slate-900/50">
                             <tr>
-                                <th className="text-center">Code agent</th>
-                                <th>Nom Prénom</th>
-                                <th>Téléphone</th>
-                                <th>Adresse</th>
-                                <th className="text-center">Actions</th>
+                                <th className="text-left p-4 text-slate-600 dark:text-slate-400 font-medium text-sm">
+                                    Code agent
+                                </th>
+                                <th className="text-left p-4 text-slate-600 dark:text-slate-400 font-medium text-sm">
+                                    Nom Prénom
+                                </th>
+                                <th className="text-left p-4 text-slate-600 dark:text-slate-400 font-medium text-sm">
+                                    Téléphone
+                                </th>
+                                <th className="text-left p-4 text-slate-600 dark:text-slate-400 font-medium text-sm">
+                                    Adresse
+                                </th>
+                                <th className="text-left p-4 text-slate-600 dark:text-slate-400 font-medium text-sm">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             {agents.map(agent => (
                                 <tr key={agent.code_agents} className="hover:bg-slate-700/10">
-                                    <th className="text-center">{agent.code_agents}</th>
+                                    <th className="text-left"> {agent.code_agents}</th>
                                     <td>
                                         <div className="flex items-center gap-3">
                                             <div className="avatar">
