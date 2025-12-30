@@ -1,20 +1,7 @@
 import type { Database } from "sqlite";
 import logger from "../config/logger";
 import { getDbConnection } from "../services/database";
-
-export type ClientType = {
-  id: string;
-  firstname: string;
-  lastname: string;
-  email?: string;
-  agentId: string;
-  accountBalance: number;
-  accountExpiresAt: string; // ISO 8601 format
-  initialDeposit: number;
-  status: 'active' | 'expired';
-};
-
-export type ClientDto = Omit<ClientType, 'id' | 'accountExpiresAt' | 'accountBalance' | 'status'>;
+import { ClientType, ClientDto } from '../types/client.types';
 
 export interface ClientModel {
     create(client: ClientDto, db: Database): Promise<ClientType>; // Pass db for transactions

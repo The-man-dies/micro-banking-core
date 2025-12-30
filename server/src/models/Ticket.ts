@@ -1,15 +1,7 @@
 import type { Database } from "sqlite";
 import logger from "../config/logger";
 import { getDbConnection } from "../services/database";
-
-export type TicketType = {
-  id: string;
-  description?: string;
-  status: 'active' | 'closed' | 'pending';
-  clientId: string;
-};
-
-export type TicketDto = Omit<TicketType, 'id'>;
+import { TicketType, TicketDto } from '../types/ticket.types';
 
 export interface TicketModel {
     create(ticket: TicketDto, db: Database): Promise<TicketType>;

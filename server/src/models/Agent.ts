@@ -1,16 +1,7 @@
 import type { Database } from "sqlite";
 import logger from "../config/logger";
 import { getDbConnection } from "../services/database";
-
-export type AgentType = {
-  id: string;
-  firstname: string;
-  lastname: string;
-  email?: string;
-  location?: string;
-};
-
-export type AgentDto = Omit<AgentType, 'id'>;
+import { AgentType, AgentDto } from '../types/agent.types';
 
 export interface AgentModel {
     create(agent: AgentDto): Promise<AgentType>;
@@ -35,7 +26,6 @@ class Agent implements AgentModel {
             ...agent
         };
         } catch (error) {
-            dbConnection.close();
             logger.error('Error creating agent:', { error });
             throw error;
         } finally {
@@ -60,7 +50,6 @@ class Agent implements AgentModel {
                 location: row.location || null
             };
         } catch (error) {
-            dbConnection.close();
             logger.error('Error finding agent:', { error });
             throw error;
         } finally {
@@ -87,7 +76,6 @@ class Agent implements AgentModel {
             );
             return updatedAgent;
         } catch (error) {
-            dbConnection.close();
             logger.error('Error updating agent:', { error });
             throw error;
         } finally {
@@ -103,7 +91,6 @@ class Agent implements AgentModel {
             );
             return result.changes !== undefined && result.changes > 0;
         } catch (error) {
-            dbConnection.close();
             logger.error('Error deleting agent:', { error });
             throw error;
         } finally {

@@ -1,8 +1,8 @@
-import { getDbConnection, initializeDatabase } from '../services/database';
-import bcrypt from 'bcrypt';
+import { initializeDatabase } from '../services/database';
 import readline from 'readline';
 import dotenv from 'dotenv';
 import logger from '../config/logger';
+import Admin from '../models/Admin';
 
 dotenv.config({ path: '.env' });
 
@@ -22,28 +22,16 @@ const createAdmin = async () => {
 
       try {
         await initializeDatabase();
-        const db = await getDbConnection();
-
-        // Hash the password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        // Check if user already exists and update or insert
-        const existingAdmin = await db.get('SELECT * FROM Admin WHERE username = ?', [username]);
+        
+        const existingAdmin = await Admin.findByUsername(username);
 
         if (existingAdmin) {
             logger.info(`Updating password for existing admin: ${username}`);
-            await db.run(
-                'UPDATE Admin SET password = ? WHERE username = ?',
-                [hashedPassword, username]
-            );
+            await Admin.updatePassword(username, password);
             logger.info('Admin password updated successfully.');
         } else {
             logger.info(`Creating new admin: ${username}`);
-            await db.run(
-                'INSERT INTO Admin (username, password) VALUES (?, ?)',
-                [username, hashedPassword]
-            );
+            await Admin.create({ username, password });
             logger.info('Admin user created successfully.');
         }
 
@@ -51,6 +39,14 @@ const createAdmin = async () => {
         logger.error('Failed to create/update admin user:', { error });
       } finally {
         rl.close();
+        const db = await (await import('../services/database')).getDbConnection();
+        if (db) {
+            // Since we're running a script, it's good practice to close the connection
+            // But getDbConnection is a singleton, so this will close it for everyone.
+            // In a real app, you'd handle this more gracefully.
+            // For this script, we'll assume it's okay to close.
+            // await db.close();
+        }
       }
     });
   });

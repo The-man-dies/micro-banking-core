@@ -1,11 +1,11 @@
 import { Response } from 'express';
-import { getDbConnection } from '../services/database';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { ApiResponse } from '../utils/response.handler';
 import logger from '../config/logger';
 import { JwtAdminPayload } from '../types/admin.types';
 import { AuthRequest } from '../types/express.d';
+import Admin from '../models/Admin';
 
 // Helper to generate tokens with a flat payload
 const generateTokens = (admin: {id: number, username: string}) => {
@@ -16,8 +16,8 @@ const generateTokens = (admin: {id: number, username: string}) => {
 
     const payload = { id: admin.id, username: admin.username };
 
-    const accessToken = jwt.sign(payload, accessTokenSecret, { expiresIn: accessTokenExpiry as any });
-    const refreshToken = jwt.sign(payload, refreshTokenSecret, { expiresIn: refreshTokenExpiry as any });
+    const accessToken = jwt.sign(payload, accessTokenSecret, { expiresIn: accessTokenExpiry });
+    const refreshToken = jwt.sign(payload, refreshTokenSecret, { expiresIn: refreshTokenExpiry });
 
     return { accessToken, refreshToken };
 };
@@ -31,8 +31,7 @@ export const login = async (req: AuthRequest, res: Response) => {
     }
 
     try {
-        const db = await getDbConnection();
-        const admin = await db.get('SELECT * FROM Admin WHERE username = ?', [username]);
+        const admin = await Admin.findByUsername(username);
 
         if (!admin) {
             logger.warn(`Login failed: Invalid credentials for username '${username}'`);
@@ -47,7 +46,7 @@ export const login = async (req: AuthRequest, res: Response) => {
 
         const { accessToken, refreshToken } = generateTokens({ id: admin.id, username: admin.username });
 
-        await db.run('UPDATE Admin SET refreshToken = ? WHERE id = ?', [refreshToken, admin.id]);
+        await Admin.update(admin.id, { refreshToken });
 
         logger.info(`Admin '${username}' logged in successfully.`);
         return ApiResponse.success(res, 'Login successful', { accessToken, refreshToken });
@@ -67,12 +66,10 @@ export const refreshToken = async (req: AuthRequest, res: Response) => {
 
     try {
         const refreshTokenSecret = process.env.JWT_REFRESH_TOKEN_SECRET || 'default_refresh_secret';
-        const db = await getDbConnection();
-        
         const decoded = jwt.verify(token, refreshTokenSecret) as JwtAdminPayload;
         const { username } = decoded;
 
-        const user = await db.get('SELECT * FROM Admin WHERE username = ? AND refreshToken = ?', [username, token]);
+        const user = await Admin.findByUsernameAndRefreshToken(username, token);
 
         if (!user) {
             logger.warn(`Refresh token reuse attempt for user: ${username}`);
@@ -98,8 +95,7 @@ export const logout = async (req: AuthRequest, res: Response) => {
     }
 
     try {
-        const db = await getDbConnection();
-        await db.run('UPDATE Admin SET refreshToken = NULL WHERE refreshToken = ?', [token]);
+        await Admin.clearRefreshToken(token);
         logger.info('User logged out successfully by invalidating refresh token.');
         return ApiResponse.success(res, 'Logout successful');
 
@@ -111,9 +107,8 @@ export const logout = async (req: AuthRequest, res: Response) => {
 
 export const status = (req: AuthRequest, res: Response) => {
     try {
-        // The 'protect' middleware ensures req.admin is populated with the decoded token payload
         const adminPayload = req.admin as JwtAdminPayload;
-        const expiresAt = adminPayload.exp; // 'exp' is a standard claim in the JWT payload
+        const expiresAt = adminPayload.exp;
 
         if (!expiresAt) {
             return ApiResponse.error(res, 'Expiration time not found in token', null, 500);
