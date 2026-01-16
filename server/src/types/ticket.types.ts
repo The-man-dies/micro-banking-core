@@ -1,10 +1,8 @@
-// server/src/types/ticket.types.ts
-
 export type TicketType = {
-  id: string;
+  id: number;
   description?: string;
   status: 'active' | 'closed' | 'pending';
-  clientId: string;
+  clientId: number;
 };
 
 export type TicketDto = Omit<TicketType, 'id'>;

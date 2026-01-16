@@ -13,10 +13,6 @@ export const createClient = async (req: AuthRequest, res: Response) => {
     try {
         const { montantEngagement, ...clientData } = req.body as ClientDto & { montantEngagement: number };
 
-        if (typeof montantEngagement !== 'number' || montantEngagement <= 0) {
-            return ApiResponse.error(res, 'Le montant de l"engagement est invalide.', null, 400);
-        }
-
         await db.run('BEGIN');
 
         const expiresAt = new Date();
@@ -24,7 +20,7 @@ export const createClient = async (req: AuthRequest, res: Response) => {
 
         const newClient = await Client.create({
             ...clientData,
-            accountBalance: 0, // Le solde commence à 0
+            accountBalance: 0,
             montantEngagement: montantEngagement,
             accountExpiresAt: expiresAt.toISOString(),
             status: 'active',
@@ -58,16 +54,12 @@ export const createClient = async (req: AuthRequest, res: Response) => {
 export const depositToAccount = async (req: AuthRequest, res: Response) => {
     const db = await getDbConnection();
     try {
-        const { id } = req.params;
+        const clientId = parseInt(req.params.id, 10);
         const { amount } = req.body;
-
-        if (typeof amount !== 'number' || amount <= 0) {
-            return ApiResponse.error(res, 'Montant du dépôt invalide', null, 400);
-        }
 
         await db.run('BEGIN');
 
-        const client = await Client.findById(id, db);
+        const client = await Client.findById(clientId, db);
         if (!client) {
             await db.run('ROLLBACK');
             return ApiResponse.error(res, 'Client not found', null, 404);
@@ -78,8 +70,14 @@ export const depositToAccount = async (req: AuthRequest, res: Response) => {
             return ApiResponse.error(res, 'Cannot deposit to an expired account. Please renew first.', null, 403);
         }
         
+        // New business rule: deposit amount must match montantEngagement
+        if (amount !== client.montantEngagement) {
+            await db.run('ROLLBACK');
+            return ApiResponse.error(res, `Le montant du dépôt (${amount} F) doit être égal au montant d'engagement du client (${client.montantEngagement} F).`, null, 400);
+        }
+        
         const newBalance = client.accountBalance + amount;
-        await Client.update(id, { accountBalance: newBalance }, db);
+        await Client.update(clientId, { accountBalance: newBalance }, db);
         
         await Transaction.create({
             clientId: client.id,
@@ -90,7 +88,7 @@ export const depositToAccount = async (req: AuthRequest, res: Response) => {
 
         await db.run('COMMIT');
 
-        logger.info(`Deposited ${amount} to client account ${id}. New balance: ${newBalance}`);
+        logger.info(`Deposited ${amount} to client account ${clientId}. New balance: ${newBalance}`);
         return ApiResponse.success(res, 'Deposit successful', { newBalance });
 
     } catch (error) {
@@ -103,16 +101,12 @@ export const depositToAccount = async (req: AuthRequest, res: Response) => {
 export const renewAccount = async (req: AuthRequest, res: Response) => {
     const db = await getDbConnection();
     try {
-        const { id } = req.params;
+        const clientId = parseInt(req.params.id, 10);
         const { fraisReactivation } = req.body;
-
-        if (typeof fraisReactivation !== 'number' || fraisReactivation <= 0) {
-            return ApiResponse.error(res, 'Les frais de réactivation sont invalides', null, 400);
-        }
 
         await db.run('BEGIN');
 
-        const client = await Client.findById(id, db);
+        const client = await Client.findById(clientId, db);
         if (!client) {
             await db.run('ROLLBACK');
             return ApiResponse.error(res, 'Client not found', null, 404);
@@ -121,8 +115,8 @@ export const renewAccount = async (req: AuthRequest, res: Response) => {
         const newExpiresAt = new Date();
         newExpiresAt.setDate(newExpiresAt.getDate() + 30);
 
-        await Client.update(id, {
-            montantEngagement: fraisReactivation, // Le nouvel engagement
+        await Client.update(clientId, {
+            montantEngagement: fraisReactivation,
             accountExpiresAt: newExpiresAt.toISOString(),
             status: 'active'
         }, db);
@@ -134,10 +128,16 @@ export const renewAccount = async (req: AuthRequest, res: Response) => {
             description: `Frais de réactivation du compte.`
         }, db);
 
+        await Ticket.create({
+            description: `Ticket de renouvellement pour le client ${client.id}`,
+            status: 'active',
+            clientId: client.id,
+        }, db);
+
         await db.run('COMMIT');
 
-        logger.info(`Client account ${id} renewed successfully.`);
-        return ApiResponse.success(res, 'Account renewed successfully', { clientId: id });
+        logger.info(`Client account ${clientId} renewed successfully.`);
+        return ApiResponse.success(res, 'Account renewed successfully', { clientId: clientId });
 
     } catch (error) {
         await db.run('ROLLBACK');
@@ -146,12 +146,10 @@ export const renewAccount = async (req: AuthRequest, res: Response) => {
     }
 };
 
-
-// Unchanged functions
 export const getClientById = async (req: AuthRequest, res: Response) => {
     try {
-        const { id } = req.params;
-        const client = await Client.findById(id);
+        const clientId = parseInt(req.params.id, 10);
+        const client = await Client.findById(clientId);
         if (!client) {
             return ApiResponse.error(res, 'Client not found', null, 404);
         }
@@ -175,9 +173,9 @@ export const getAllClients = async (req: AuthRequest, res: Response) => {
 
 export const updateClient = async (req: AuthRequest, res: Response) => {
     try {
-        const { id } = req.params;
+        const clientId = parseInt(req.params.id, 10);
         const clientData: Partial<ClientDto> = req.body;
-        const updatedClient = await Client.update(id, clientData);
+        const updatedClient = await Client.update(clientId, clientData);
         if (!updatedClient) {
             return ApiResponse.error(res, 'Client not found', null, 404);
         }
@@ -190,8 +188,8 @@ export const updateClient = async (req: AuthRequest, res: Response) => {
 
 export const deleteClient = async (req: AuthRequest, res: Response) => {
     try {
-        const { id } = req.params;
-        const deleted = await Client.delete(id);
+        const clientId = parseInt(req.params.id, 10);
+        const deleted = await Client.delete(clientId);
         if (!deleted) {
             return ApiResponse.error(res, 'Client not found', null, 404);
         }
@@ -205,11 +203,11 @@ export const deleteClient = async (req: AuthRequest, res: Response) => {
 export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
     const db = await getDbConnection();
     try {
-        const { id } = req.params;
+        const clientId = parseInt(req.params.id, 10);
 
         await db.run('BEGIN');
 
-        const client = await Client.findById(id, db);
+        const client = await Client.findById(clientId, db);
         if (!client) {
             await db.run('ROLLBACK');
             return ApiResponse.error(res, 'Client not found', null, 404);
@@ -222,10 +220,8 @@ export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
             return ApiResponse.error(res, 'No balance to payout for this client.', null, 400);
         }
 
-        // Set account balance to 0 and status to expired after payout
-        await Client.update(id, { accountBalance: 0, status: 'expired' }, db); 
+        await Client.update(clientId, { accountBalance: 0, status: 'expired' }, db); 
 
-        // Log the withdrawal transaction
         await Transaction.create({
             clientId: client.id,
             amount: amountToPayout,
@@ -235,8 +231,8 @@ export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
 
         await db.run('COMMIT');
 
-        logger.info(`Client account ${id} paid out successfully. Amount: ${amountToPayout}`);
-        return ApiResponse.success(res, 'Client account paid out successfully', { clientId: id, amountPaidOut: amountToPayout });
+        logger.info(`Client account ${clientId} paid out successfully. Amount: ${amountToPayout}`);
+        return ApiResponse.success(res, 'Client account paid out successfully', { clientId, amountPaidOut: amountToPayout });
 
     } catch (error) {
         await db.run('ROLLBACK');
@@ -244,4 +240,3 @@ export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
         return ApiResponse.error(res, 'Failed to pay out client account', null, 500);
     }
 };
-

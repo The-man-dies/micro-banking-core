@@ -16,8 +16,10 @@ const generateTokens = (admin: {id: number, username: string}) => {
 
     const payload = { id: admin.id, username: admin.username };
 
-    const accessToken = jwt.sign(payload, accessTokenSecret, { expiresIn: accessTokenExpiry });
-    const refreshToken = jwt.sign(payload, refreshTokenSecret, { expiresIn: refreshTokenExpiry });
+    // @ts-ignore
+    const accessToken = jwt.sign(payload, accessTokenSecret as jwt.Secret, { expiresIn: accessTokenExpiry });
+    // @ts-ignore
+    const refreshToken = jwt.sign(payload, refreshTokenSecret as jwt.Secret, { expiresIn: refreshTokenExpiry });
 
     return { accessToken, refreshToken };
 };

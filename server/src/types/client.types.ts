@@ -10,4 +10,4 @@ export type ClientType = {
   status: 'active' | 'expired';
 };
 
-export type ClientDto = Omit<ClientType, 'id' | 'status'>;
+export type ClientDto = Omit<ClientType, 'id'>;

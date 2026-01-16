@@ -2,7 +2,8 @@ import { Response } from 'express';
 import { ApiResponse } from '../utils/response.handler';
 import logger from '../config/logger';
 import { AuthRequest } from '../types/express.d'; // Assuming AuthRequest is extended for general use
-import Agent, { AgentDto } from '../models/Agent';
+import Agent from '../models/Agent';
+import { AgentDto } from '../types/agent.types';
 
 export const createAgent = async (req: AuthRequest, res: Response) => {
     try {
