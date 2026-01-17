@@ -3,97 +3,74 @@ import logger from "../config/logger";
 import { getDbConnection } from "../services/database";
 import { TicketType, TicketDto } from '../types/ticket.types';
 
-export interface TicketModel {
+export interface ITicketModel {
     create(ticket: TicketDto, db: Database): Promise<TicketType>;
-    findById(id: string): Promise<TicketType | null>;
-    update(id: string, ticket: Partial<TicketType>): Promise<TicketType | null>;
-    delete(id: string): Promise<boolean>;
+    findById(id: number, db?: Database): Promise<TicketType | null>;
+    update(id: number, ticket: Partial<TicketType>, db?: Database): Promise<TicketType | null>;
+    delete(id: number, db?: Database): Promise<boolean>;
 }
 
-class Ticket implements TicketModel {
+class TicketModel implements ITicketModel {
+
+    private async getConnection(db?: Database): Promise<Database> {
+        return db || getDbConnection();
+    }
+
     public async create(ticket: TicketDto, db: Database): Promise<TicketType> {
-        try {
-            const result = await db.run(
+        const result = await db.run(
             `INSERT INTO Ticket (description, status, clientId) VALUES (?, ?, ?)`,
             ticket.description || null,
             ticket.status,
             ticket.clientId
         );
-        return {
-            id: result.lastID?.toString() || '',
+        const newId = result.lastID;
+        if (!newId) {
+            throw new Error("Failed to create ticket.");
+        }
+        const newTicket = await this.findById(newId, db);
+        if (!newTicket) {
+            throw new Error("Failed to retrieve ticket after creation.");
+        }
+        return newTicket;
+    }
+
+    public async findById(id: number, db?: Database): Promise<TicketType | null> {
+        const conn = await this.getConnection(db);
+        const row = await conn.get<TicketType>(
+            `SELECT * FROM Ticket WHERE id = ?`,
+            id
+        );
+        return row || null;
+    }
+
+    public async update(id: number, ticket: Partial<TicketType>, db?: Database): Promise<TicketType | null> {
+        const conn = await this.getConnection(db);
+        const existingTicket = await this.findById(id, conn);
+        if (!existingTicket) return null;
+
+        const updatedTicket = {
+            ...existingTicket,
             ...ticket
         };
-        }
-        catch (error) {
-            
-            logger.error('Error creating ticket:', { error });
-            throw error;
-        }
+
+        await conn.run(
+            `UPDATE Ticket SET description = ?, status = ?, clientId = ? WHERE id = ?`,
+            updatedTicket.description || null,
+            updatedTicket.status,
+            updatedTicket.clientId,
+            id
+        );
+        return this.findById(id, conn);
     }
 
-    public async findById(id: string): Promise<TicketType | null> {
-        let dbConnection = await getDbConnection();
-        try {
-            const row = await dbConnection.get(
-                `SELECT * FROM Ticket WHERE id = ?`,
-                id
-            );
-            if (!row) return null;
-            return {
-                id: row.id.toString(),
-                description: row.description,
-                status: row.status,
-                clientId: row.clientId
-            };
-        } catch (error) {
-            logger.error('Error finding ticket by ID:', { error });
-            throw error;
-        } finally {
-
-        }
-
-    }
-
-    public async update(id: string, ticket: Partial<TicketType>): Promise<TicketType | null> {
-        let dbConnection = await getDbConnection();
-        try {
-            const existingTicket = await this.findById(id);
-            if (!existingTicket) return null;
-            const updatedTicket = {
-                ...existingTicket,
-                ...ticket
-            };
-            await dbConnection.run(
-                `UPDATE Ticket SET description = ?, status = ?, clientId = ? WHERE id = ?`,
-                updatedTicket.description || null,
-                updatedTicket.status,
-                updatedTicket.clientId,
-                id
-            );
-            return updatedTicket;
-        } catch (error) {
-            logger.error('Error updating ticket:', { error });
-            throw error;
-        } finally {
-
-        }
-    }
-
-    public async delete(id: string): Promise<boolean> {
-        let dbConnection = await getDbConnection();
-        try {
-            const result = await dbConnection.run(
-                `DELETE FROM Ticket WHERE id = ?`,
-                id
-            );
-            return result.changes !== undefined && result.changes > 0;
-        } catch (error) {
-            logger.error('Error deleting ticket:', { error });
-            throw error;
-        } finally {
-
-        }
+    public async delete(id: number, db?: Database): Promise<boolean> {
+        const conn = await this.getConnection(db);
+        const result = await conn.run(
+            `DELETE FROM Ticket WHERE id = ?`,
+            id
+        );
+        return (result.changes ?? 0) > 0;
     }
 }
 
-export default new Ticket();
+export default new TicketModel();

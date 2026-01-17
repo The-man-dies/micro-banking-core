@@ -2,12 +2,16 @@ import { Response } from 'express';
 import { ApiResponse } from '../utils/response.handler';
 import logger from '../config/logger';
 import { AuthRequest } from '../types/express.d';
-import Ticket, { TicketDto } from '../models/Ticket'; // Import the Ticket model
+import Ticket from '../models/Ticket';
+import { TicketDto } from '../types/ticket.types';
+import { getDbConnection } from '../services/database';
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
+    const db = await getDbConnection();
     try {
         const ticketData: TicketDto = req.body;
-        const newTicket = await Ticket.create(ticketData);
+        // The create method now requires a db instance for potential transactions
+        const newTicket = await Ticket.create(ticketData, db);
         logger.info('Ticket created successfully:', { ticketId: newTicket.id });
         return ApiResponse.success(res, 'Ticket created successfully', newTicket, 201);
     } catch (error) {
@@ -18,8 +22,8 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
 
 export const getTicketById = async (req: AuthRequest, res: Response) => {
     try {
-        const { id } = req.params;
-        const ticket = await Ticket.findById(id);
+        const ticketId = parseInt(req.params.id, 10);
+        const ticket = await Ticket.findById(ticketId);
         if (!ticket) {
             return ApiResponse.error(res, 'Ticket not found', null, 404);
         }
@@ -33,9 +37,9 @@ export const getTicketById = async (req: AuthRequest, res: Response) => {
 
 export const updateTicket = async (req: AuthRequest, res: Response) => {
     try {
-        const { id } = req.params;
+        const ticketId = parseInt(req.params.id, 10);
         const ticketData: Partial<TicketDto> = req.body;
-        const updatedTicket = await Ticket.update(id, ticketData);
+        const updatedTicket = await Ticket.update(ticketId, ticketData);
         if (!updatedTicket) {
             return ApiResponse.error(res, 'Ticket not found', null, 404);
         }
@@ -49,12 +53,12 @@ export const updateTicket = async (req: AuthRequest, res: Response) => {
 
 export const deleteTicket = async (req: AuthRequest, res: Response) => {
     try {
-        const { id } = req.params;
-        const deleted = await Ticket.delete(id);
+        const ticketId = parseInt(req.params.id, 10);
+        const deleted = await Ticket.delete(ticketId);
         if (!deleted) {
             return ApiResponse.error(res, 'Ticket not found', null, 404);
         }
-        logger.info('Ticket deleted successfully:', { ticketId: id });
+        logger.info('Agent deleted successfully:', { ticketId: ticketId });
         return ApiResponse.success(res, 'Ticket deleted successfully', null, 204);
     } catch (error) {
         logger.error('Error deleting ticket:', { error });
@@ -65,8 +69,8 @@ export const deleteTicket = async (req: AuthRequest, res: Response) => {
 // You might also want a getAllTickets function
 export const getAllTickets = async (req: AuthRequest, res: Response) => {
     try {
-        const db = await (await import('../services/database')).getDbConnection();
-        const tickets = await db.all('SELECT id, description, status, agentId FROM Ticket');
+        const db = await getDbConnection();
+        const tickets = await db.all('SELECT id, description, status, clientId FROM Ticket');
         logger.info('All tickets retrieved successfully.');
         return ApiResponse.success(res, 'Tickets retrieved successfully', tickets);
     } catch (error) {
