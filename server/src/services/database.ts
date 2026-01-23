@@ -3,13 +3,13 @@ import { open, Database } from 'sqlite';
 import logger from '../config/logger';
 
 // Use in-memory DB for tests, otherwise use a file
-const DB_FILE = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATABASE_FILE || 'database.db');
+const DB_FILE = process.env.NODE_ENV === 'development' ? ':memory:' : (process.env.DATABASE_FILE || 'database.db');
 
 let dbConnection: Database | null = null;
 
 export const getDbConnection = async () => {
     // For tests, we want a new in-memory db for each test suite, so don't use singleton.
-    if (process.env.NODE_ENV === 'test') {
+    if (process.env.NODE_ENV === 'development') {
         const verboseDb = sqlite3.verbose();
         return open({
             filename: DB_FILE,
@@ -42,7 +42,7 @@ export const closeDbConnection = async () => {
 export const initializeDatabase = async (db?: Database) => {
     try {
         const conn = db || await getDbConnection();
-        if(!db) logger.info('Connected to the SQLite database.');
+        if (!db) logger.info('Connected to the SQLite database.');
 
         // Use db.exec for CREATE TABLE statements
         await conn.exec(`
@@ -54,7 +54,7 @@ export const initializeDatabase = async (db?: Database) => {
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        if(!db) logger.info('Admin table is ready.');
+        if (!db) logger.info('Admin table is ready.');
 
         await conn.exec(`
             CREATE TABLE IF NOT EXISTS Agent (
@@ -65,7 +65,7 @@ export const initializeDatabase = async (db?: Database) => {
                 location TEXT
             )
         `);
-        if(!db) logger.info('Agent table is ready.');
+        if (!db) logger.info('Agent table is ready.');
 
         await conn.exec(`
             CREATE TABLE IF NOT EXISTS Client (
@@ -81,7 +81,7 @@ export const initializeDatabase = async (db?: Database) => {
                 FOREIGN KEY (agentId) REFERENCES Agent(id)
             )
         `);
-        if(!db) logger.info('Client table is ready.');
+        if (!db) logger.info('Client table is ready.');
 
         await conn.exec(`
             CREATE TABLE IF NOT EXISTS Ticket (
@@ -92,7 +92,7 @@ export const initializeDatabase = async (db?: Database) => {
                 FOREIGN KEY (clientId) REFERENCES Client(id)
             )
         `);
-        if(!db) logger.info('Ticket table is ready.');
+        if (!db) logger.info('Ticket table is ready.');
 
         await conn.exec(`
             CREATE TABLE IF NOT EXISTS Transactions (
@@ -105,7 +105,7 @@ export const initializeDatabase = async (db?: Database) => {
                 FOREIGN KEY (clientId) REFERENCES Client(id)
             )
         `);
-        if(!db) logger.info('Transactions table is ready.');
+        if (!db) logger.info('Transactions table is ready.');
 
     } catch (error) {
         logger.error('Database initialization failed:', { error });
