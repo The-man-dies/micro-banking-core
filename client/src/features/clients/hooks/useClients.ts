@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import api from "../../../services/api";
-import { Client } from "../types";
+import api from "../../../services/api-client";
+import type { Client } from "../types";
 
 export const useClients = () => {
     const [clients, setClients] = useState<Client[]>([]);
@@ -12,7 +12,7 @@ export const useClients = () => {
         setError(null);
         try {
             const response = await api<Client[]>("/clients");
-            setClients(response.data.data); // Assuming response.data contains { data: Client[] }
+            setClients(response.data); // Assuming response.data contains { data: Client[] }
         } catch (err: any) {
             setError(err.message || "An error occurred while fetching clients.");
         } finally {
@@ -78,13 +78,13 @@ export const useClients = () => {
         }
     }, [fetchClients]);
 
-    return { 
-        clients, 
-        isLoading, 
-        error, 
-        refetchClients: fetchClients, 
-        createClient, 
-        updateClient, 
+    return {
+        clients,
+        isLoading,
+        error,
+        refetchClients: fetchClients,
+        createClient,
+        updateClient,
         deleteClient,
         deposit,
         payout,

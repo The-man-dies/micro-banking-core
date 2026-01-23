@@ -1,6 +1,7 @@
-import React, { useState } from "react";
 import { Edit, LocationEdit, Phone, Trash2Icon } from "lucide-react";
-import { Agent } from "../types"; // Import the Agent type
+import type { Agent } from "../types"; // Import the Agent type
+import { useState } from "react";
+// Import the Agent type
 
 type Props = {
     agents: Agent[];

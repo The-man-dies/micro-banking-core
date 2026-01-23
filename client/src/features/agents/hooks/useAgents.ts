@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import api from "../../../services/api";
-import { Agent } from "../types.ts"; // Explicit import
+import api from "../../../services/api-client.ts";
+import type { Agent } from "../types.ts"; // Explicit import
 
 export const useAgents = () => {
     const [agents, setAgents] = useState<Agent[]>([]);
@@ -12,7 +12,7 @@ export const useAgents = () => {
         setError(null);
         try {
             const response = await api<Agent[]>("/agents");
-            setAgents(response.data.data); // Assuming response.data contains { data: Agent[] }
+            setAgents(response.data); // Assuming response.data contains { data: Agent[] }
         } catch (err: any) {
             setError(err.message || "An error occurred while fetching agents.");
         } finally {
@@ -20,7 +20,7 @@ export const useAgents = () => {
         }
     }, []);
 
-    const createAgent = useCallback(async (newAgentData: Omit<Agent, 'id' | 'createdAt' | 'updatedAt'> & {password: string}) => {
+    const createAgent = useCallback(async (newAgentData: Omit<Agent, 'id' | 'createdAt' | 'updatedAt'> & { password: string }) => {
         try {
             await api("/agents", { method: "POST", data: newAgentData });
             fetchAgents(); // Refresh the list

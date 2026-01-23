@@ -3,7 +3,7 @@ import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 // Create an axios instance
 const axiosInstance = axios.create({
-    baseURL: "http://localhost:3000/api/v1", // Assumes the server runs on port 3000
+    baseURL: "http://localhost:3001/api/v1", // Assumes the server runs on port 3000
     headers: {
         "Content-Type": "application/json",
     },
@@ -33,7 +33,7 @@ const api = async <T = any>(
             url: endpoint,
             ...options,
         });
-        return response;
+        return response.data;
     } catch (error: any) {
         // Axios wraps the error, so we extract the relevant part
         const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";

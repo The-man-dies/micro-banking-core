@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import api from "../../../services/api";
+import api from "../../../services/api-client";
 
 export const useDashboard = () => {
     const [stats, setStats] = useState<any>(null);

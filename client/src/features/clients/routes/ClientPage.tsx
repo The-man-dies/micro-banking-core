@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { useClients } from "../hooks/useClients";
-import { Client } from "../types";
+import type { Client } from "../types";
 
 // Placeholder components - will be created next
 const ClientTable = ({ clients, onEdit, onDelete, onFinancialOp }: any) => {
@@ -71,12 +71,12 @@ const FinancialOperationForm = ({ onClose, onSubmit, client, operationType }: an
 
 
 export default function ClientPage() {
-    const { 
-        clients, 
-        isLoading, 
-        error, 
-        createClient, 
-        updateClient, 
+    const {
+        clients,
+        isLoading,
+        error,
+        createClient,
+        updateClient,
         deleteClient,
         deposit,
         payout,
@@ -129,7 +129,7 @@ export default function ClientPage() {
     };
 
     // Filter clients based on search term
-    const filteredClients = clients.filter(client => 
+    const filteredClients = clients.filter(client =>
         client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.phone.includes(searchTerm) ||
         client.address.toLowerCase().includes(searchTerm.toLowerCase())
@@ -188,7 +188,7 @@ export default function ClientPage() {
 
                 {/* Client Table */}
                 <div className="bg-gray-800/50 rounded-xl overflow-hidden border border-gray-700">
-                    <ClientTable 
+                    <ClientTable
                         clients={filteredClients}
                         onEdit={handleEditClientClick}
                         onDelete={handleDeleteClient}
@@ -212,8 +212,8 @@ export default function ClientPage() {
                     onClose={handleCloseFinancialOperationModal}
                     onSubmit={
                         financialOperationType === 'deposit' ? deposit :
-                        financialOperationType === 'payout' ? payout :
-                        renewAccount
+                            financialOperationType === 'payout' ? payout :
+                                renewAccount
                     }
                     client={selectedClientForFinancialOp}
                     operationType={financialOperationType}

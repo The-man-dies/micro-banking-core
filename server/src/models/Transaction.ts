@@ -1,6 +1,6 @@
 import type { Database } from "sqlite";
 import logger from "../config/logger";
-import { TransactionDto, TransactionType } from '../types/transaction.types';
+import type { TransactionDto, TransactionType } from '../types/transaction.types';
 
 export interface ITransactionModel {
     create(transaction: TransactionDto, db: Database): Promise<TransactionType>;
@@ -22,7 +22,7 @@ class TransactionModel implements ITransactionModel {
                 `SELECT * FROM Transactions WHERE id = ?`,
                 result.lastID
             );
-            
+
             if (!createdTransaction) {
                 throw new Error('Failed to retrieve created transaction.');
             }

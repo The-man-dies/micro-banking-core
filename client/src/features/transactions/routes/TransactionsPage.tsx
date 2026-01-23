@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTransactions } from '../hooks/useTransactions';
-import { Transaction } from '../types';
+import type { Transaction } from '../types';
 import { Search } from 'lucide-react';
 
 const TransactionsTable = ({ transactions }: { transactions: Transaction[] }) => {
@@ -26,11 +26,10 @@ const TransactionsTable = ({ transactions }: { transactions: Transaction[] }) =>
                         <tr key={tx.id} className="hover:bg-slate-700/10">
                             <td className="text-center">{tx.id}</td>
                             <td>
-                                <span className={`badge ${
-                                    tx.type === 'deposit' ? 'badge-success' :
-                                    tx.type === 'payout' ? 'badge-warning' :
-                                    'badge-info'
-                                } text-white`}>
+                                <span className={`badge ${tx.type === 'deposit' ? 'badge-success' :
+                                        tx.type === 'payout' ? 'badge-warning' :
+                                            'badge-info'
+                                    } text-white`}>
                                     {tx.type}
                                 </span>
                             </td>

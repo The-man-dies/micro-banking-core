@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import api from "../../../services/api";
+import api from "../../../services/api-client";
 
 // Re-using the same logic as the dashboard for now.
 // This can be expanded later if specific accounting endpoints are created.

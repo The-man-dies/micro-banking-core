@@ -36,7 +36,7 @@ export const checkAndExpireAccounts = async () => {
         if (result.changes && result.changes > 0) {
             logger.info(`Expired ${result.changes} client accounts found with past expiration date.`);
         } else {
-            // logger.debug("No expired accounts found."); // Optional debug log
+            logger.debug("No expired accounts found."); // Optional debug log
         }
 
     } catch (error) {

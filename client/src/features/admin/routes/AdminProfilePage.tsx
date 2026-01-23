@@ -1,5 +1,3 @@
-import React from 'react';
-
 const AdminProfilePage = () => {
     return (
         <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
