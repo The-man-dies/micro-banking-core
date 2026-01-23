@@ -13,8 +13,8 @@ export const useTransactions = () => {
         try {
             // This endpoint needs to be created on the backend.
             // For now, we assume it exists and returns all transactions.
-            const response = await api<Transaction[]>("/transactions");
-            setTransactions(response.data); // Assuming response.data.data is the array
+            const response = await api<{ data: Transaction[] }>("/transactions");
+            setTransactions(response.data.data); // Assuming response.data.data is the array
         } catch (err: any) {
             setError(err.message || "An error occurred while fetching transactions.");
             // Since the endpoint likely doesn't exist, we'll mock some data on error

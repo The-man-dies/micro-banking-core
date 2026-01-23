@@ -1,24 +1,29 @@
-import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Users, ArrowRightLeft, Wallet, LogOut, ShieldCheck, User } from "lucide-react";
+import api from "../../../../services/api-client";
 
 export default function Sidebar() {
     const navigate = useNavigate();
-    const [active, setActive] = useState<string>(() => {
-        const saved = localStorage.getItem("active");
-        return saved ? JSON.parse(saved) : "";
-    });
 
-    useEffect(() => {
-        localStorage.setItem("active", JSON.stringify(active));
-    }, [active]);
+    const handleLogout = async () => {
+        const refreshToken = localStorage.getItem("refreshToken");
 
-    const handleLogout = () => {
+        if (refreshToken) {
+            try {
+                await api("/admin/logout", {
+                    method: "POST",
+                    data: { token: refreshToken },
+                });
+            } catch (error) {
+                console.error("Error during server-side logout:", error);
+                // Continue with client-side logout even if server-side fails
+            }
+        }
+
         // Clear all session-related data
         localStorage.removeItem("isAuthenticated");
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
-        localStorage.removeItem("active");
         navigate("/login");
     };
 
@@ -37,77 +42,71 @@ export default function Sidebar() {
                 </div>
 
                 <nav className="flex flex-col gap-3">
-                    <NavLink to={"/dashboard"}>
-                        <button
-                            onClick={() => setActive("dashboard")}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active === "dashboard"
-                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-                                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                            }`}>
-                            <LayoutDashboard />
-                            <span className="font-medium">Dashbord</span>
-                        </button>
+                    <NavLink
+                        to={"/dashboard"}
+                        className={({ isActive }) =>
+                            `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                            }`
+                        }>
+                        <LayoutDashboard />
+                        <span className="font-medium">Dashbord</span>
                     </NavLink>
-                    <NavLink to={"/client"}>
-                        <button
-                            onClick={() => setActive("client")}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active === "client"
-                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-                                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                            }`}>
-                            <Users size={20} />
-                            <span className="font-medium">Clients</span>
-                        </button>
+                    <NavLink
+                        to={"/client"}
+                        className={({ isActive }) =>
+                            `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                            }`
+                        }>
+                        <Users size={20} />
+                        <span className="font-medium">Clients</span>
                     </NavLink>
-                    <NavLink to={"/agent"}>
-                        <button
-                            onClick={() => setActive("agent")}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active === "agent"
-                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-                                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                            }`}>
-                            <Users size={20} />
-                            <span className="font-medium">Agents</span>
-                        </button>
+                    <NavLink
+                        to={"/agent"}
+                        className={({ isActive }) =>
+                            `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                            }`
+                        }>
+                        <Users size={20} />
+                        <span className="font-medium">Agents</span>
                     </NavLink>
-                    <NavLink to={"/transactions"}>
-                        <button
-                            onClick={() => setActive("transactions")}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active === "transactions"
-                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-                                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                            }`}>
-                            <ArrowRightLeft size={20} />
-                            <span className="font-medium">Transactions</span>
-                        </button>
+                    <NavLink
+                        to={"/transactions"}
+                        className={({ isActive }) =>
+                            `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                            }`
+                        }>
+                        <ArrowRightLeft size={20} />
+                        <span className="font-medium">Transactions</span>
                     </NavLink>
-                    <NavLink to={"/comptabilité"}>
-                        <button
-                            onClick={() => setActive("comptabilité")}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active === "comptabilité"
-                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-                                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                            }`}>
-                            <Wallet size={20} />
-                            <span className="font-medium">Comtabilités</span>
-                        </button>
+                    <NavLink
+                        to={"/comptabilite"}
+                        className={({ isActive }) =>
+                            `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                            }`
+                        }>
+                        <Wallet size={20} />
+                        <span className="font-medium">Comtabilités</span>
                     </NavLink>
-                    <NavLink to={"/profile"}>
-                        <button
-                            onClick={() => setActive("profile")}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                active === "profile"
-                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-                                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                            }`}>
-                            <User size={20} />
-                            <span className="font-medium">Profil</span>
-                        </button>
+                    <NavLink
+                        to={"/profile"}
+                        className={({ isActive }) =>
+                            `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                            }`
+                        }>
+                        <User size={20} />
+                        <span className="font-medium">Profil</span>
                     </NavLink>
                 </nav>
                 {/** sidebar */}

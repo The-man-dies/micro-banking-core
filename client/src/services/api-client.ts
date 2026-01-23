@@ -33,7 +33,7 @@ const api = async <T = any>(
             url: endpoint,
             ...options,
         });
-        return response.data;
+        return response;
     } catch (error: any) {
         // Axios wraps the error, so we extract the relevant part
         const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
