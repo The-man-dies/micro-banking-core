@@ -17,12 +17,12 @@ const LoginPage = () => {
         try {
             const response = await api("/admin/login", {
                 method: "POST",
-                body: { username, password },
+                data: { username, password },
             });
 
-            if (response.data && response.data.accessToken && response.data.refreshToken) {
-                localStorage.setItem("accessToken", response.data.accessToken);
-                localStorage.setItem("refreshToken", response.data.refreshToken);
+            if (response.data.data && response.data.data.accessToken && response.data.data.refreshToken) {
+                localStorage.setItem("accessToken", response.data.data.accessToken);
+                localStorage.setItem("refreshToken", response.data.data.refreshToken);
                 localStorage.setItem("isAuthenticated", "true"); // For compatibility with existing components
                 navigate("/dashboard");
             } else {

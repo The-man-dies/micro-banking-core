@@ -41,7 +41,7 @@ function AppRoute() {
                 <Route path="/client" element={<ClientPage />} />
                 <Route path="/agent" element={<AgentPage />} />
                 <Route path="/transactions" element={<TransactionsPage />} />
-                <Route path="/comptabilité" element={<ComptabilitePage />} />
+                <Route path="/comptabilite" element={<ComptabilitePage />} />
                 <Route path="/profile" element={<AdminProfilePage />} />
             </Route>
         </Routes>

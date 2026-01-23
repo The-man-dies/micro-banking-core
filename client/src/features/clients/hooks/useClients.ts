@@ -11,8 +11,8 @@ export const useClients = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await api<Client[]>("/clients");
-            setClients(response.data); // Assuming response.data contains { data: Client[] }
+            const response = await api<{ data: Client[] }>("/clients");
+            setClients(response.data.data);
         } catch (err: any) {
             setError(err.message || "An error occurred while fetching clients.");
         } finally {

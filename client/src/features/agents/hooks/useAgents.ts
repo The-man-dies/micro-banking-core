@@ -11,8 +11,8 @@ export const useAgents = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await api<Agent[]>("/agents");
-            setAgents(response.data); // Assuming response.data contains { data: Agent[] }
+            const response = await api<{ data: Agent[] }>("/agents");
+            setAgents(response.data.data);
         } catch (err: any) {
             setError(err.message || "An error occurred while fetching agents.");
         } finally {
