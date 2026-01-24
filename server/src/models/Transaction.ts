@@ -4,6 +4,7 @@ import type { TransactionDto, TransactionType } from '../types/transaction.types
 
 export interface ITransactionModel {
     create(transaction: TransactionDto, db: Database): Promise<TransactionType>;
+    getAll(db: Database): Promise<TransactionType[]>;
 }
 
 class TransactionModel implements ITransactionModel {
@@ -31,6 +32,18 @@ class TransactionModel implements ITransactionModel {
 
         } catch (error) {
             logger.error('Error creating transaction:', { error });
+            throw error;
+        }
+    }
+
+    public async getAll(db: Database): Promise<TransactionType[]> {
+        try {
+            const transactions = await db.all<TransactionType[]>(
+                `SELECT * FROM Transactions ORDER BY createdAt DESC`
+            );
+            return transactions;
+        } catch (error) {
+            logger.error('Error fetching all transactions:', { error });
             throw error;
         }
     }

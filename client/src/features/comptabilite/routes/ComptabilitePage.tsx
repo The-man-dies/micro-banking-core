@@ -37,17 +37,17 @@ const ComptabilitePage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatCard 
                         title="Solde Total Actif" 
-                        value={`${(stats?.totalCurrentBalance / 1000000).toFixed(2) ?? '0.00'} M`}
+                        value={`${((stats?.totalCurrentBalance ?? 0) / 1000000).toFixed(2)} M`}
                         description="Solde de tous les comptes clients"
                     />
                     <StatCard 
                         title="Total Dépôts (30j)" 
-                        value={`${(stats?.totalDepositsLast30Days / 1000000).toFixed(2) ?? '0.00'} M`}
+                        value={`${((stats?.totalDepositsLast30Days ?? 0) / 1000000).toFixed(2)} M`}
                         description="Montant total déposé"
                     />
                     <StatCard 
                         title="Total Retraits (30j)" 
-                        value={`${(stats?.totalPayoutsLast30Days / 1000000).toFixed(2) ?? '0.00'} M`}
+                        value={`${((stats?.totalPayoutsLast30Days ?? 0) / 1000000).toFixed(2)} M`}
                         description="Montant total retiré"
                     />
                      <StatCard 

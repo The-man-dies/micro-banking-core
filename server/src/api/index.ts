@@ -4,6 +4,7 @@ import agentRoutes from './agent.routes';
 import ticketRoutes from './ticket.routes';
 import clientRoutes from './client.routes';
 import statsRoutes from './stats.routes';
+import transactionRoutes from './transaction.routes';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.use('/agents', agentRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/clients', clientRoutes);
 router.use('/stats', statsRoutes);
+router.use('/transactions', transactionRoutes);
 
 router.get('/', (req, res) => {
     res.json({ message: 'Welcome to the Micro Banking API v1' });
