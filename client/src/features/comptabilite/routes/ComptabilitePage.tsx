@@ -17,6 +17,8 @@ const StatCard = ({ title, value, description }: { title: string, value: string 
 const ComptabilitePage = () => {
     const { stats, timeSeries, isLoading, error } = useComptabilite();
 
+    const formatToMillions = (value?: number) => `${((value ?? 0) / 1000000).toFixed(2)} M`;
+
     if (isLoading) {
         return <div className="text-center py-10 text-white">Chargement des données comptables...</div>;
     }
@@ -37,17 +39,17 @@ const ComptabilitePage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatCard 
                         title="Solde Total Actif" 
-                        value={`${((stats?.totalCurrentBalance ?? 0) / 1000000).toFixed(2)} M`}
+                        value={formatToMillions(stats?.totalCurrentBalance)}
                         description="Solde de tous les comptes clients"
                     />
                     <StatCard 
                         title="Total Dépôts (30j)" 
-                        value={`${((stats?.totalDepositsLast30Days ?? 0) / 1000000).toFixed(2)} M`}
+                        value={formatToMillions(stats?.totalDepositsLast30Days)}
                         description="Montant total déposé"
                     />
                     <StatCard 
                         title="Total Retraits (30j)" 
-                        value={`${((stats?.totalPayoutsLast30Days ?? 0) / 1000000).toFixed(2)} M`}
+                        value={formatToMillions(stats?.totalPayoutsLast30Days)}
                         description="Montant total retiré"
                     />
                      <StatCard 

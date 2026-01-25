@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import { Client } from "../types";
+import { type Client } from "../types";
 
 // Define the type for the data submitted by the form for creation
-type ClientFormData = Omit<Client, 'id' | 'accountBalance' | 'accountStatus' | 'createdAt' | 'updatedAt'>;
+export type ClientFormData = Omit<Client, 'id' | 'accountBalance' | 'accountStatus' | 'createdAt' | 'updatedAt'>;
 
 type Props = {
     onClose: () => void;

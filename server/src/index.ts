@@ -1,11 +1,11 @@
-import app from './app';
 import dotenv from 'dotenv';
+dotenv.config();
+
+import app from './app';
 import { initializeDatabase } from './services/database';
 import logger from './config/logger';
 import { startExpirationService } from './services/cron';
 
-// Load environment variables
-dotenv.config();
 
 const port = process.env.PORT || 3000;
 

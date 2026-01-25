@@ -2,72 +2,9 @@ import { useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { useClients } from "../hooks/useClients";
 import type { Client } from "../types";
-
-// Placeholder components - will be created next
-const ClientTable = ({ clients, onEdit, onDelete, onFinancialOp }: any) => {
-    if (!clients || clients.length === 0) return <p className="text-center py-10 text-gray-500">Aucun client trouvé.</p>;
-    return (
-        <div className="overflow-x-auto">
-            <table className="table table-zebra w-full">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nom</th>
-                        <th>Téléphone</th>
-                        <th>Adresse</th>
-                        <th>Solde</th>
-                        <th>Statut</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {clients.map((client: Client) => (
-                        <tr key={client.id}>
-                            <td>{client.id}</td>
-                            <td>{client.name}</td>
-                            <td>{client.phone}</td>
-                            <td>{client.address}</td>
-                            <td>{client.accountBalance}</td>
-                            <td>{client.accountStatus}</td>
-                            <td>
-                                <button className="btn btn-sm btn-info mr-2" onClick={() => onEdit(client)}>Modifier</button>
-                                <button className="btn btn-sm btn-warning mr-2" onClick={() => onFinancialOp(client, 'deposit')}>Dépôt</button>
-                                <button className="btn btn-sm btn-accent mr-2" onClick={() => onFinancialOp(client, 'payout')}>Retrait</button>
-                                <button className="btn btn-sm btn-success mr-2" onClick={() => onFinancialOp(client, 'renew')}>Renouveler</button>
-                                <button className="btn btn-sm btn-error" onClick={() => onDelete(client.id)}>Supprimer</button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-const ClientForm = ({ onClose, onSubmit, initialData }: any) => {
-    const isEditMode = !!initialData;
-    return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-base-100 p-8 rounded-lg shadow-xl w-full max-w-md">
-                <h2 className="text-2xl font-bold mb-4">{isEditMode ? "Modifier Client" : "Ajouter Client"}</h2>
-                <p>Client Form Placeholder</p>
-                <button className="btn btn-primary mt-4" onClick={() => { alert('Form Submitted!'); onSubmit({ name: 'Test', phone: '123', address: 'xyz', agentId: 1 }); onClose(); }}>Submit (Demo)</button>
-                <button className="btn btn-ghost ml-2" onClick={onClose}>Cancel</button>
-            </div>
-        </div>
-    );
-};
-const FinancialOperationForm = ({ onClose, onSubmit, client, operationType }: any) => {
-    return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-base-100 p-8 rounded-lg shadow-xl w-full max-w-md">
-                <h2 className="text-2xl font-bold mb-4">{operationType} for {client?.name}</h2>
-                <p>Financial Operation Form Placeholder</p>
-                <button className="btn btn-primary mt-4" onClick={() => { alert('Operation Submitted!'); onSubmit(client?.id, 100); onClose(); }}>Submit (Demo)</button>
-                <button className="btn btn-ghost ml-2" onClick={onClose}>Cancel</button>
-            </div>
-        </div>
-    );
-};
+import ClientTable from "../components/ClientTable";
+import ClientForm, { type ClientFormData } from "../components/ClientForm";
+import FinancialOperationForm from "../components/FinancialOperationForm";
 
 
 export default function ClientPage() {
@@ -126,6 +63,30 @@ export default function ClientPage() {
         setIsFinancialOperationModalOpen(false);
         setSelectedClientForFinancialOp(null);
         setFinancialOperationType(null);
+    };
+
+    const handleFinancialOperationSubmit = async (clientId: number, amount?: number) => {
+        switch (financialOperationType) {
+            case 'deposit':
+                if (amount === undefined) throw new Error("Amount is required for deposit.");
+                await deposit(clientId, amount);
+                break;
+            case 'payout':
+                if (amount === undefined) throw new Error("Amount is required for payout.");
+                await payout(clientId, amount);
+                break;
+            case 'renew':
+                await renewAccount(clientId);
+                break;
+        }
+    };
+
+    const handleClientFormSubmit = async (clientData: ClientFormData, id: number | undefined) => {
+        if (editingClient && id) {
+            await updateClient(id, clientData);
+        } else {
+            await createClient(clientData);
+        }
     };
 
     // Filter clients based on search term
@@ -201,7 +162,7 @@ export default function ClientPage() {
             {isClientFormOpen && (
                 <ClientForm
                     onClose={handleCloseClientForm}
-                    onSubmit={editingClient ? updateClient : createClient}
+                    onSubmit={handleClientFormSubmit}
                     initialData={editingClient}
                 />
             )}
@@ -210,11 +171,7 @@ export default function ClientPage() {
             {isFinancialOperationModalOpen && selectedClientForFinancialOp && financialOperationType && (
                 <FinancialOperationForm
                     onClose={handleCloseFinancialOperationModal}
-                    onSubmit={
-                        financialOperationType === 'deposit' ? deposit :
-                            financialOperationType === 'payout' ? payout :
-                                renewAccount
-                    }
+                    onSubmit={handleFinancialOperationSubmit}
                     client={selectedClientForFinancialOp}
                     operationType={financialOperationType}
                 />

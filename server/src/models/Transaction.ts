@@ -36,10 +36,10 @@ class TransactionModel implements ITransactionModel {
         }
     }
 
-    public async getAll(db: Database): Promise<TransactionType[]> {
+    public async getAll(db: Database): Promise<(TransactionType & { agentId: number })[]> {
         try {
-            const transactions = await db.all<TransactionType[]>(
-                `SELECT * FROM Transactions ORDER BY createdAt DESC`
+            const transactions = await db.all<(TransactionType & { agentId: number })[]>(
+                `SELECT t.*, c.agentId FROM Transactions AS t JOIN Client AS c ON t.clientId = c.id ORDER BY t.createdAt DESC`
             );
             return transactions;
         } catch (error) {

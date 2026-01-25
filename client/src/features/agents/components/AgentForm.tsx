@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import type { Agent } from "../types"; // Import the Agent type
 
 // Define the type for the data submitted by the form
-type AgentFormData = Omit<Agent, 'id' | 'createdAt' | 'updatedAt'> & { password?: string };
+type AgentFormData = Omit<Agent, 'id' | 'createdAt' | 'updatedAt'>;
 
 type Props = {
     onClose: () => void;
@@ -15,7 +15,6 @@ export default function AgentForm({ onClose, onSubmit, initialData }: Props) {
     const [name, setName] = useState(initialData?.name || "");
     const [phone, setPhone] = useState(initialData?.phone || "");
     const [address, setAddress] = useState(initialData?.address || "");
-    const [password, setPassword] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -29,19 +28,11 @@ export default function AgentForm({ onClose, onSubmit, initialData }: Props) {
         setIsSubmitting(true);
 
         const agentData: AgentFormData = { name, phone, address };
-        if (!isEditMode || password) { // Password is required for creation, optional for update
-            agentData.password = password;
-        }
 
         try {
             if (isEditMode && initialData?.id) {
                 await onSubmit(agentData, initialData.id);
             } else {
-                if (!password) { // Ensure password is provided for creation
-                    setError("Le mot de passe est requis pour la création d'un agent.");
-                    setIsSubmitting(false);
-                    return;
-                }
                 await onSubmit(agentData);
             }
             onClose(); // Close form on success
@@ -131,21 +122,6 @@ export default function AgentForm({ onClose, onSubmit, initialData }: Props) {
                             required
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text font-semibold">Mot de passe {isEditMode ? "(Laisser vide pour ne pas modifier)" : "*"}</span>
-                        </label>
-                        <input
-                            type="password"
-                            name="password"
-                            placeholder={isEditMode ? "********" : "Entrez un mot de passe"}
-                            className="input input-bordered w-full focus:input-primary"
-                            required={!isEditMode}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
 

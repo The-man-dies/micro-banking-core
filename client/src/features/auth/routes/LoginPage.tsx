@@ -4,7 +4,7 @@ import api from "../../../services/api-client";
 
 const LoginPage = () => {
     const [username, setUsername] = useState("admin");
-    const [password, setPassword] = useState("password");
+    const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
@@ -139,7 +139,7 @@ const LoginPage = () => {
                                 className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-600 rounded bg-gray-700"
                             />
                             <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
-                                Se souvenir de moi
+                                Se souvenir de moi (Expérimental)
                             </label>
                         </div>
                     </div>
