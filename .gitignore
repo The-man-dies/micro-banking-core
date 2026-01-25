@@ -25,4 +25,5 @@ dist-ssr
 PR_DESCRIPTION.md
 ISSUE_DESCRIPTION.md
 # database
-.db
+server/*.db
+
