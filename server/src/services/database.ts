@@ -3,13 +3,13 @@ import { open, Database } from 'sqlite';
 import logger from '../config/logger';
 
 // Use in-memory DB for tests, otherwise use a file
-const DB_FILE = process.env.NODE_ENV === 'development' ? ':memory:' : (process.env.DATABASE_FILE || 'database.db');
+const DB_FILE = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATABASE_FILE || 'database.db');
 
 let dbConnection: Database | null = null;
 
 export const getDbConnection = async () => {
     // For tests, we want a new in-memory db for each test suite, so don't use singleton.
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'test') {
         const verboseDb = sqlite3.verbose();
         return open({
             filename: DB_FILE,

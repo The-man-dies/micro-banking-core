@@ -1,5 +1,4 @@
-import React from "react";
-import { Client } from "../../types";
+import type { Client } from "../types";
 import { Edit, Trash2Icon, DollarSign, RefreshCw, MinusCircle } from "lucide-react";
 
 type Props = {
@@ -38,11 +37,10 @@ export default function ClientTable({ clients, onEdit, onDelete, onFinancialOp }
                             <td>{client.address}</td>
                             <td className="text-right font-bold">{client.accountBalance.toLocaleString()} FCFA</td>
                             <td>
-                                <span className={`badge ${
-                                    client.accountStatus === 'active' ? 'badge-success' :
+                                <span className={`badge ${client.accountStatus === 'active' ? 'badge-success' :
                                     client.accountStatus === 'suspended' ? 'badge-warning' :
-                                    'badge-error'
-                                } text-white`}>
+                                        'badge-error'
+                                    } text-white`}>
                                     {client.accountStatus}
                                 </span>
                             </td>
