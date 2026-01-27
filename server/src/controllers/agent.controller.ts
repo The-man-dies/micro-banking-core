@@ -4,6 +4,7 @@ import logger from '../config/logger';
 import { AuthRequest } from '../types/express.d'; // Assuming AuthRequest is extended for general use
 import Agent from '../models/Agent';
 import { AgentDto } from '../types/agent.types';
+import { databaseService } from '../services/database';
 
 export const createAgent = async (req: AuthRequest, res: Response) => {
     try {
@@ -63,12 +64,13 @@ export const deleteAgent = async (req: AuthRequest, res: Response) => {
     }
 };
 
+
 // You might also want a getAllAgents function
 export const getAllAgents = async (req: AuthRequest, res: Response) => {
     try {
         // Agent.ts doesn't have a getAll method, so we'll need to add it or implement here
         // For now, let's assume a direct query
-        const db = await (await import('../services/database')).getDbConnection();
+        const db = await databaseService.getDbConnection();
         const agents = await db.all('SELECT id, firstname, lastname, email, location FROM Agent');
         logger.info('All agents retrieved successfully.');
         return ApiResponse.success(res, 'Agents retrieved successfully', agents);

@@ -3,7 +3,7 @@ import { AuthRequest } from '../types/express.d';
 import { ApiResponse } from '../utils/response.handler';
 import logger from '../config/logger';
 import Client from '../models/Client';
-import { getDbConnection } from '../services/database';
+import { databaseService } from '../services/database';
 
 export const checkAccountStatus = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -23,7 +23,7 @@ export const checkAccountStatus = async (req: AuthRequest, res: Response, next: 
         // Check if the account is expired and the status needs updating
         if (now > expiresAt && client.status === 'active') {
             logger.info(`Client account ${client.id} has expired. Updating status.`);
-            const db = await getDbConnection();
+            const db = await databaseService.getDbConnection();
             await db.run('UPDATE Client SET status = ? WHERE id = ?', ['expired', client.id]);
             client.status = 'expired'; // Update the object for the current request
         }

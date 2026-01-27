@@ -1,4 +1,4 @@
-import { getDbConnection } from "./database";
+import { databaseService } from "./database";
 import logger from "../config/logger";
 
 const EXPIRATION_CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000; // Check every 12 hours
@@ -15,7 +15,7 @@ export const startExpirationService = () => {
 
 export const checkAndExpireAccounts = async () => {
     try {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         const now = new Date().toISOString();
 
         // Transaction handling (good practice for batch updates)

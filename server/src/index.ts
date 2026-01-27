@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import app from './app';
-import { initializeDatabase } from './services/database';
+import { databaseService } from './services/database';
 import logger from './config/logger';
 import { startExpirationService } from './services/cron';
 
@@ -10,7 +10,7 @@ import { startExpirationService } from './services/cron';
 const port = process.env.PORT || 3000;
 
 // Initialize the database and then start the server
-initializeDatabase().then(() => {
+databaseService.initializeDatabase().then(() => {
     // Start background services
     startExpirationService();
 
