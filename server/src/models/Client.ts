@@ -1,6 +1,6 @@
 import type { Database } from "sqlite";
 import logger from "../config/logger";
-import { getDbConnection } from "../services/database";
+import { databaseService } from "../services/database";
 import { ClientType, ClientDto } from '../types/client.types';
 
 export interface IClientModel {
@@ -13,7 +13,7 @@ export interface IClientModel {
 class ClientModel implements IClientModel {
     
     private async getConnection(db?: Database): Promise<Database> {
-        return db || getDbConnection();
+        return db || databaseService.getDbConnection();
     }
 
     public async create(client: Partial<ClientDto>, db: Database): Promise<ClientType> {

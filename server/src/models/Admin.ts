@@ -1,4 +1,4 @@
-import { getDbConnection } from "../services/database";
+import { databaseService } from "../services/database";
 import logger from "../config/logger";
 import bcrypt from 'bcrypt';
 import { AdminType, AdminDto } from '../types/admin.types';
@@ -15,7 +15,7 @@ export interface AdminModel {
 
 class Admin implements AdminModel {
     public async create(adminDto: AdminDto): Promise<AdminType> {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         
         // Hash the password
         const salt = await bcrypt.genSalt(10);
@@ -34,19 +34,19 @@ class Admin implements AdminModel {
     }
 
     public async findByUsername(username: string): Promise<AdminType | null> {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         const admin = await db.get<AdminType>('SELECT * FROM Admin WHERE username = ?', [username]);
         return admin || null;
     }
 
     public async findById(id: number): Promise<AdminType | null> {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         const admin = await db.get<AdminType>('SELECT * FROM Admin WHERE id = ?', [id]);
         return admin || null;
     }
 
     public async update(id: number, data: Partial<AdminType>): Promise<AdminType | null> {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         const admin = await this.findById(id);
         if (!admin) return null;
 
@@ -60,20 +60,20 @@ class Admin implements AdminModel {
     }
 
     public async updatePassword(username: string, password: string): Promise<void> {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         await db.run('UPDATE Admin SET password = ? WHERE username = ?', [hashedPassword, username]);
     }
 
     public async findByUsernameAndRefreshToken(username: string, token: string): Promise<AdminType | null> {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         const admin = await db.get<AdminType>('SELECT * FROM Admin WHERE username = ? AND refreshToken = ?', [username, token]);
         return admin || null;
     }
 
     public async clearRefreshToken(token: string): Promise<void> {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         await db.run('UPDATE Admin SET refreshToken = NULL WHERE refreshToken = ?', [token]);
     }
 }

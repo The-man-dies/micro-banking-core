@@ -1,4 +1,4 @@
-import { getDbConnection, initializeDatabase } from '../../services/database';
+import { databaseService } from '../../services/database';
 import { createClient, depositToAccount, renewAccount, payoutClientAccount } from '../client.controller';
 import { Request, Response } from 'express';
 import { Database } from 'sqlite';
@@ -24,8 +24,8 @@ describe('Client Controller', () => {
   let db: Database;
 
   beforeAll(async () => {
-    db = await getDbConnection();
-    await initializeDatabase(db);
+    db = await databaseService.getDbConnection();
+    await databaseService.initializeDatabase(db);
     await db.run("INSERT INTO Agent (id, firstname, lastname) VALUES (1, 'Test', 'Agent')");
   });
 
@@ -62,12 +62,11 @@ describe('Client Controller', () => {
       const res = mockResponse() as Response;
 
       // We need to override getDbConnection for the controller to use our in-memory db instance
-      const originalGetDb = require('../../services/database').getDbConnection;
-      require('../../services/database').getDbConnection = jest.fn().mockResolvedValue(db);
+      const getDbConnectionSpy = jest.spyOn(databaseService, 'getDbConnection').mockResolvedValue(db);
 
       await createClient(req, res);
 
-      require('../../services/database').getDbConnection = originalGetDb;
+      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(201);
       const client = await db.get('SELECT * FROM Client WHERE id = 1');
@@ -88,12 +87,11 @@ describe('Client Controller', () => {
       const req = mockRequest({ amount: engagement }, { id: '1' }) as Request; // Deposit matching engagement
       const res = mockResponse() as Response;
       
-      const originalGetDb = require('../../services/database').getDbConnection;
-      require('../../services/database').getDbConnection = jest.fn().mockResolvedValue(db);
+      const getDbConnectionSpy = jest.spyOn(databaseService, 'getDbConnection').mockResolvedValue(db);
       
       await depositToAccount(req, res);
       
-      require('../../services/database').getDbConnection = originalGetDb;
+      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { newBalance: 1100 } })); // 100 + 1000 = 1100
@@ -112,12 +110,11 @@ describe('Client Controller', () => {
       const req = mockRequest({ amount: 500 }, { id: '1' }) as Request; // Deposit NOT matching engagement
       const res = mockResponse() as Response;
       
-      const originalGetDb = require('../../services/database').getDbConnection;
-      require('../../services/database').getDbConnection = jest.fn().mockResolvedValue(db);
+      const getDbConnectionSpy = jest.spyOn(databaseService, 'getDbConnection').mockResolvedValue(db);
       
       await depositToAccount(req, res);
       
-      require('../../services/database').getDbConnection = originalGetDb;
+      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
@@ -136,12 +133,11 @@ describe('Client Controller', () => {
       const req = mockRequest({ fraisReactivation: 1500 }, { id: '1' }) as Request;
       const res = mockResponse() as Response;
       
-      const originalGetDb = require('../../services/database').getDbConnection;
-      require('../../services/database').getDbConnection = jest.fn().mockResolvedValue(db);
+      const getDbConnectionSpy = jest.spyOn(databaseService, 'getDbConnection').mockResolvedValue(db);
 
       await renewAccount(req, res);
       
-      require('../../services/database').getDbConnection = originalGetDb;
+      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(200);
 
@@ -160,12 +156,11 @@ describe('Client Controller', () => {
       const req = mockRequest({}, { id: '1' }) as Request;
       const res = mockResponse() as Response;
       
-      const originalGetDb = require('../../services/database').getDbConnection;
-      require('../../services/database').getDbConnection = jest.fn().mockResolvedValue(db);
+      const getDbConnectionSpy = jest.spyOn(databaseService, 'getDbConnection').mockResolvedValue(db);
 
       await payoutClientAccount(req, res);
 
-      require('../../services/database').getDbConnection = originalGetDb;
+      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
@@ -191,12 +186,11 @@ describe('Client Controller', () => {
       const req = mockRequest({}, { id: '1' }) as Request;
       const res = mockResponse() as Response;
       
-      const originalGetDb = require('../../services/database').getDbConnection;
-      require('../../services/database').getDbConnection = jest.fn().mockResolvedValue(db);
+      const getDbConnectionSpy = jest.spyOn(databaseService, 'getDbConnection').mockResolvedValue(db);
 
       await payoutClientAccount(req, res);
 
-      require('../../services/database').getDbConnection = originalGetDb;
+      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(400);
     });

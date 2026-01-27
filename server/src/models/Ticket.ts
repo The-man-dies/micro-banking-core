@@ -1,6 +1,6 @@
 import type { Database } from "sqlite";
 import logger from "../config/logger";
-import { getDbConnection } from "../services/database";
+import { databaseService } from "../services/database";
 import { TicketType, TicketDto } from '../types/ticket.types';
 
 export interface ITicketModel {
@@ -13,7 +13,7 @@ export interface ITicketModel {
 class TicketModel implements ITicketModel {
 
     private async getConnection(db?: Database): Promise<Database> {
-        return db || getDbConnection();
+        return db || databaseService.getDbConnection();
     }
 
     public async create(ticket: TicketDto, db: Database): Promise<TicketType> {
