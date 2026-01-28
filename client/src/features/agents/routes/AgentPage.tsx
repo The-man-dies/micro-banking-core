@@ -29,20 +29,26 @@ export default function AgentPage() {
             await updateAgent(id, agentData);
         } else {
             // It's a creation
-            if (!agentData.password) {
-                throw new Error("Password is required for new agents.");
-            }
             await createAgent(agentData);
         }
     };
 
-    const filteredAgents = agents.filter(
-        agent =>
-            agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            agent.phone.toString().includes(searchTerm) ||
-            agent.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            agent.id.toString().includes(searchTerm)
-    );
+    const filteredAgents = agents.filter(agent => {
+        const term = searchTerm.trim().toLowerCase();
+        if (!term) return true;
+
+        const haystack = [
+            agent.firstname,
+            agent.lastname,
+            agent.email ?? "",
+            agent.location ?? "",
+            agent.id.toString(),
+        ]
+            .join(" ")
+            .toLowerCase();
+
+        return haystack.includes(term);
+    });
 
     const mainContent = (
         <div className="space-y-4 md:space-y-6">

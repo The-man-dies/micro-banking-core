@@ -3,6 +3,8 @@ export type ClientType = {
   firstname: string;
   lastname: string;
   email?: string;
+  phone: string;
+  location: string;
   agentId: number;
   accountBalance: number;
   montantEngagement: number;

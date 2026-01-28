@@ -1,4 +1,4 @@
-import { Edit, LocationEdit, Phone, Trash2Icon } from "lucide-react";
+import { Edit, LocationEdit, Mail, Trash2Icon } from "lucide-react";
 import type { Agent } from "../types"; // Import the Agent type
 import { useState } from "react";
 // Import the Agent type
@@ -31,14 +31,10 @@ export default function AgentTable({ agents, onEdit, onDelete }: Props) {
         setAgentToDeleteId(null);
     };
 
-    const nameProfile = (name: string) => {
-        const nameParts = name.trim().split(" ");
-        if (nameParts.length === 0) return "??";
-
-        const firstInitial = nameParts[0][0]?.toUpperCase() || "";
-        const secondInitial = nameParts[1]?.[0]?.toUpperCase() || "";
-
-        return firstInitial + secondInitial;
+    const nameProfile = (agent: Agent) => {
+        const firstInitial = agent.firstname?.trim()?.[0]?.toUpperCase() || "";
+        const secondInitial = agent.lastname?.trim()?.[0]?.toUpperCase() || "";
+        return (firstInitial + secondInitial) || "??";
     };
 
     return (
@@ -49,8 +45,8 @@ export default function AgentTable({ agents, onEdit, onDelete }: Props) {
                         <tr>
                             <th className="text-center">ID</th>
                             <th>Nom Prénom</th>
-                            <th>Téléphone</th>
-                            <th>Adresse</th>
+                            <th>Email</th>
+                            <th>Localisation</th>
                             <th className="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -63,23 +59,23 @@ export default function AgentTable({ agents, onEdit, onDelete }: Props) {
                                         <div className="avatar">
                                             <div className="bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center">
                                                 <span className="text-sm font-bold">
-                                                    {nameProfile(agent.name)}
+                                                    {nameProfile(agent)}
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="font-medium">{agent.name}</div>
+                                        <div className="font-medium">{agent.firstname} {agent.lastname}</div>
                                     </div>
                                 </td>
                                 <td>
                                     <div className="flex items-center gap-2">
-                                        <Phone size={18} className="text-slate-500" />
-                                        <span>{agent.phone}</span>
+                                        <Mail size={18} className="text-slate-500" />
+                                        <span>{agent.email ?? '-'}</span>
                                     </div>
                                 </td>
                                 <td>
                                     <div className="flex items-center gap-2">
                                         <LocationEdit size={18} className="text-slate-500" />
-                                        <span>{agent.address}</span>
+                                        <span>{agent.location ?? '-'}</span>
                                     </div>
                                 </td>
                                 <td>

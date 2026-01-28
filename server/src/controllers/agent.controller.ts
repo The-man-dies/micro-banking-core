@@ -68,10 +68,27 @@ export const deleteAgent = async (req: AuthRequest, res: Response) => {
 // You might also want a getAllAgents function
 export const getAllAgents = async (req: AuthRequest, res: Response) => {
     try {
-        // Agent.ts doesn't have a getAll method, so we'll need to add it or implement here
-        // For now, let's assume a direct query
         const db = await databaseService.getDbConnection();
-        const agents = await db.all('SELECT id, firstname, lastname, email, location FROM Agent');
+        const qRaw = (req.query.q as string | undefined) ?? '';
+        const q = qRaw.trim();
+
+        const agents = q
+            ? await db.all(
+                `SELECT id, firstname, lastname, email, location
+                 FROM Agent
+                 WHERE CAST(id AS TEXT) LIKE ?
+                    OR LOWER(firstname) LIKE LOWER(?)
+                    OR LOWER(lastname) LIKE LOWER(?)
+                    OR LOWER(IFNULL(email, '')) LIKE LOWER(?)
+                    OR LOWER(IFNULL(location, '')) LIKE LOWER(?)
+                 ORDER BY id DESC`,
+                `%${q}%`,
+                `%${q}%`,
+                `%${q}%`,
+                `%${q}%`,
+                `%${q}%`
+            )
+            : await db.all('SELECT id, firstname, lastname, email, location FROM Agent ORDER BY id DESC');
         logger.info('All agents retrieved successfully.');
         return ApiResponse.success(res, 'Agents retrieved successfully', agents);
     } catch (error) {

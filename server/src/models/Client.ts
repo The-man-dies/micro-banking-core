@@ -18,10 +18,12 @@ class ClientModel implements IClientModel {
 
     public async create(client: Partial<ClientDto>, db: Database): Promise<ClientType> {
         const result = await db.run(
-            `INSERT INTO Client (firstname, lastname, email, agentId, accountBalance, montantEngagement, accountExpiresAt, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO Client (firstname, lastname, email, phone, location, agentId, accountBalance, montantEngagement, accountExpiresAt, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             client.firstname,
             client.lastname,
             client.email || null,
+            client.phone,
+            client.location,
             client.agentId,
             client.accountBalance,
             client.montantEngagement,
@@ -48,10 +50,12 @@ class ClientModel implements IClientModel {
         const updatedClient = { ...existing, ...client };
 
         await conn.run(
-            `UPDATE Client SET firstname = ?, lastname = ?, email = ?, agentId = ?, accountBalance = ?, montantEngagement = ?, accountExpiresAt = ?, status = ? WHERE id = ?`,
+            `UPDATE Client SET firstname = ?, lastname = ?, email = ?, phone = ?, location = ?, agentId = ?, accountBalance = ?, montantEngagement = ?, accountExpiresAt = ?, status = ? WHERE id = ?`,
             updatedClient.firstname,
             updatedClient.lastname,
             updatedClient.email,
+            updatedClient.phone,
+            updatedClient.location,
             updatedClient.agentId,
             updatedClient.accountBalance,
             updatedClient.montantEngagement,

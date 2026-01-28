@@ -11,7 +11,7 @@ import { ClientDto } from '../types/client.types';
 export const createClient = async (req: AuthRequest, res: Response) => {
     const db = await databaseService.getDbConnection();
     try {
-        const { montantEngagement, ...clientData } = req.body as ClientDto & { montantEngagement: number };
+        const { montantEngagement, ...clientData } = req.body as ClientDto;
 
         await db.run('BEGIN');
 

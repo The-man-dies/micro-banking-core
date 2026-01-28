@@ -12,9 +12,10 @@ export const validate = (schema: ZodObject<any>) => (req: Request, res: Response
     next();
   } catch (error) {
     if (error instanceof ZodError) {
-      const errorMessages = (error as any).errors.map((issue: any) => ({
-        message: `${issue.path.join('.')} is ${issue.message.toLowerCase()}`,
-      }));
+      const errorMessages = error.issues.map((issue) => {
+        const path = issue.path.join('.') || 'input';
+        return `${path}: ${issue.message}`;
+      });
       return ApiResponse.error(res, 'Invalid input data', errorMessages, 400);
     }
     return ApiResponse.error(res, 'Internal Server Error', null, 500);

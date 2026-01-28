@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import type { Agent } from "../types"; // Import the Agent type
 
 // Define the type for the data submitted by the form
-type AgentFormData = Omit<Agent, 'id' | 'createdAt' | 'updatedAt'>;
+type AgentFormData = Omit<Agent, 'id'>;
 
 type Props = {
     onClose: () => void;
@@ -12,9 +12,10 @@ type Props = {
 };
 
 export default function AgentForm({ onClose, onSubmit, initialData }: Props) {
-    const [name, setName] = useState(initialData?.name || "");
-    const [phone, setPhone] = useState(initialData?.phone || "");
-    const [address, setAddress] = useState(initialData?.address || "");
+    const [firstname, setFirstname] = useState(initialData?.firstname || "");
+    const [lastname, setLastname] = useState(initialData?.lastname || "");
+    const [email, setEmail] = useState(initialData?.email || "");
+    const [location, setLocation] = useState(initialData?.location || "");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +28,12 @@ export default function AgentForm({ onClose, onSubmit, initialData }: Props) {
         setError(null);
         setIsSubmitting(true);
 
-        const agentData: AgentFormData = { name, phone, address };
+        const agentData: AgentFormData = {
+            firstname,
+            lastname,
+            email: email.trim() ? email.trim() : undefined,
+            location: location.trim() ? location.trim() : undefined,
+        };
 
         try {
             if (isEditMode && initialData?.id) {
@@ -72,6 +78,7 @@ export default function AgentForm({ onClose, onSubmit, initialData }: Props) {
                             <input
                                 type="text"
                                 value={initialData?.id || ''}
+                                title="ID Agent"
                                 className="input input-bordered w-full bg-gray-200"
                                 readOnly
                             />
@@ -80,48 +87,59 @@ export default function AgentForm({ onClose, onSubmit, initialData }: Props) {
 
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text font-semibold">Nom et Prénom *</span>
+                            <span className="label-text font-semibold">Prénom *</span>
                         </label>
                         <input
                             type="text"
-                            name="name"
-                            placeholder="Ex: Assimi Goita"
+                            name="firstname"
+                            placeholder="Ex: Assimi"
                             className="input input-bordered w-full focus:input-primary"
                             required
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            value={firstname}
+                            onChange={(e) => setFirstname(e.target.value)}
                         />
                     </div>
 
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text font-semibold">Numéro de Téléphone *</span>
+                            <span className="label-text font-semibold">Nom *</span>
                         </label>
                         <input
-                            type="tel"
-                            name="phone"
-                            placeholder="Ex: 70123456"
+                            type="text"
+                            name="lastname"
+                            placeholder="Ex: Goita"
                             className="input input-bordered w-full focus:input-primary"
                             required
-                            pattern="[0-9]{8,}"
-                            title="8 chiffres minimum"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            value={lastname}
+                            onChange={(e) => setLastname(e.target.value)}
                         />
                     </div>
 
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text font-semibold">Adresse *</span>
+                            <span className="label-text font-semibold">Email</span>
+                        </label>
+                        <input
+                            type="email"
+                            name="email"
+                            placeholder="Ex: agent@example.com"
+                            className="input input-bordered w-full focus:input-primary"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text font-semibold">Localisation</span>
                         </label>
                         <input
                             type="text"
-                            name="address"
-                            placeholder="Ex: Bamako, Hamdallaye"
+                            name="location"
+                            placeholder="Ex: Bamako"
                             className="input input-bordered w-full focus:input-primary"
-                            required
-                            value={address}
-                            onChange={(e) => setAddress(e.target.value)}
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
                         />
                     </div>
 

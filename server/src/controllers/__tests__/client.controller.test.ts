@@ -56,6 +56,8 @@ describe('Client Controller', () => {
       const req = mockRequest({
         firstname: 'John',
         lastname: 'Doe',
+        phone: '+223 78 33 44 33',
+        location: 'Bamako',
         agentId: 1,
         montantEngagement: 1000,
       }) as Request;

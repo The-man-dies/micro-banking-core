@@ -4,12 +4,12 @@ interface KPICardProps {
     title: string;
     value: string | number;
     icon: React.ReactNode;
-    trend: "up" | "down";
-    trendValue: string;
+    trend?: "up" | "down";
+    trendValue?: string;
     className?: string;
 }
 
-export const KPICard: React.FC<KPICardProps> = ({ title, value, icon, trend, trendValue, className = "" }) => {
+export const KPICard: React.FC<KPICardProps> = ({ title, value, icon, trend = "up", trendValue = "", className = "" }) => {
     const trendColors = {
         up: "text-green-500",
         down: "text-red-500",
@@ -34,10 +34,12 @@ export const KPICard: React.FC<KPICardProps> = ({ title, value, icon, trend, tre
                 <div>
                     <p className="text-sm font-medium text-gray-400">{title}</p>
                     <p className="text-2xl font-bold text-white mt-1">{value}</p>
-                    <div className={`flex items-center mt-2 text-sm ${trendColors[trend]}`}>
-                        {trendIcons[trend]}
-                        <span>{trendValue}</span>
-                    </div>
+                    {trendValue ? (
+                        <div className={`flex items-center mt-2 text-sm ${trendColors[trend]}`}>
+                            {trendIcons[trend]}
+                            <span>{trendValue}</span>
+                        </div>
+                    ) : null}
                 </div>
                 <div className="p-3 rounded-lg bg-indigo-900 bg-opacity-30 text-indigo-400">{icon}</div>
             </div>

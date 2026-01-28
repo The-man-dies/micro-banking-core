@@ -1,11 +1,13 @@
 export type Client = {
-    id: number;
-    name: string;
-    phone: string;
-    address: string;
-    accountBalance: number;
-    accountStatus: 'active' | 'inactive' | 'suspended'; // Assuming these statuses
-    agentId: number; // Foreign key to agent
-    createdAt?: string;
-    updatedAt?: string;
+  id: number;
+  firstname: string;
+  lastname: string;
+  email?: string;
+  phone: string;
+  location: string;
+  agentId: number;
+  montantEngagement: number;
+  accountBalance: number;
+  accountExpiresAt: string; // ISO 8601 format
+  status: 'active' | 'expired';
 };

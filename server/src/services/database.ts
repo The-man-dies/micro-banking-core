@@ -96,6 +96,8 @@ class DatabaseService {
                     firstname TEXT NOT NULL,
                     lastname TEXT NOT NULL,
                     email TEXT,
+                    phone TEXT NOT NULL DEFAULT '',
+                    location TEXT NOT NULL DEFAULT '',
                     agentId INTEGER NOT NULL,
                     accountBalance REAL NOT NULL DEFAULT 0,
                     montantEngagement REAL NOT NULL DEFAULT 0,
@@ -105,6 +107,21 @@ class DatabaseService {
                 )
             `);
             if (!db) logger.info('Client table is ready.');
+
+            // Ensure schema is up to date for existing DB files (SQLite doesn't support IF NOT EXISTS for columns).
+            const clientColumns = await conn.all<{ name: string }[]>(`PRAGMA table_info(Client)`);
+            const clientColumnNames = new Set(clientColumns.map(c => c.name));
+
+            if (!clientColumnNames.has('phone')) {
+                await conn.exec(`ALTER TABLE Client ADD COLUMN phone TEXT NOT NULL DEFAULT ''`);
+            }
+            if (!clientColumnNames.has('location')) {
+                await conn.exec(`ALTER TABLE Client ADD COLUMN location TEXT NOT NULL DEFAULT ''`);
+            }
+
+            // Backfill existing rows that may have NULLs from older schemas.
+            await conn.exec(`UPDATE Client SET phone = '' WHERE phone IS NULL`);
+            await conn.exec(`UPDATE Client SET location = '' WHERE location IS NULL`);
 
             await conn.exec(`
                 CREATE TABLE IF NOT EXISTS Ticket (
