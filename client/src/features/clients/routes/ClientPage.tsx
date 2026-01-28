@@ -90,11 +90,23 @@ export default function ClientPage() {
     };
 
     // Filter clients based on search term
-    const filteredClients = clients.filter(client =>
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.phone.includes(searchTerm) ||
-        client.address.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredClients = clients.filter(client => {
+        const term = searchTerm.trim().toLowerCase();
+        if (!term) return true;
+
+        const haystack = [
+            client.firstname,
+            client.lastname,
+            client.email ?? "",
+            client.phone,
+            client.location,
+            String(client.id),
+        ]
+            .join(" ")
+            .toLowerCase();
+
+        return haystack.includes(term);
+    });
 
     if (isLoading) {
         return <p className="text-white text-center py-10">Chargement des clients...</p>;

@@ -20,8 +20,9 @@ export default function ClientTable({ clients, onEdit, onDelete, onFinancialOp }
                     <tr>
                         <th className="text-center">ID</th>
                         <th>Nom</th>
+                        <th>Email</th>
                         <th>Téléphone</th>
-                        <th>Adresse</th>
+                        <th>Localisation</th>
                         <th className="text-right">Solde</th>
                         <th>Statut</th>
                         <th className="text-center">Agent ID</th>
@@ -32,16 +33,14 @@ export default function ClientTable({ clients, onEdit, onDelete, onFinancialOp }
                     {clients.map((client: Client) => (
                         <tr key={client.id} className="hover:bg-slate-700/10">
                             <td className="text-center">{client.id}</td>
-                            <td className="font-medium">{client.name}</td>
+                            <td className="font-medium">{client.firstname} {client.lastname}</td>
+                            <td>{client.email ?? '-'}</td>
                             <td>{client.phone}</td>
-                            <td>{client.address}</td>
+                            <td>{client.location}</td>
                             <td className="text-right font-bold">{client.accountBalance.toLocaleString()} FCFA</td>
                             <td>
-                                <span className={`badge ${client.accountStatus === 'active' ? 'badge-success' :
-                                    client.accountStatus === 'suspended' ? 'badge-warning' :
-                                        'badge-error'
-                                    } text-white`}>
-                                    {client.accountStatus}
+                                <span className={`badge ${client.status === 'active' ? 'badge-success' : 'badge-error'} text-white`}>
+                                    {client.status}
                                 </span>
                             </td>
                             <td className="text-center">{client.agentId}</td>

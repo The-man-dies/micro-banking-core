@@ -14,10 +14,12 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const clientLabel = `${client.firstname} ${client.lastname}`;
+
     const title =
-        operationType === 'deposit' ? `Déposer sur le compte de ${client.name}` :
-            operationType === 'payout' ? `Retirer du compte de ${client.name}` :
-                `Renouveler le compte de ${client.name}`;
+        operationType === 'deposit' ? `Déposer sur le compte de ${clientLabel}` :
+            operationType === 'payout' ? `Retirer du compte de ${clientLabel}` :
+                `Renouveler le compte de ${clientLabel}`;
 
     const submitButtonText =
         operationType === 'deposit' ? "Confirmer le dépôt" :
@@ -70,7 +72,7 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
                     )}
 
                     <p className="text-sm text-gray-300">
-                        Client: <span className="font-bold">{client.name} (ID: {client.id})</span>
+                        Client: <span className="font-bold">{clientLabel} (ID: {client.id})</span>
                     </p>
                     <p className="text-sm text-gray-300">
                         Solde actuel: <span className="font-bold">{client.accountBalance.toLocaleString()} FCFA</span>
@@ -96,7 +98,7 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
 
                     {operationType === 'renew' && (
                         <p className="py-4 text-center text-lg text-white">
-                            Confirmez-vous le renouvellement du compte de {client.name} ?
+                            Confirmez-vous le renouvellement du compte de {clientLabel} ?
                         </p>
                     )}
 

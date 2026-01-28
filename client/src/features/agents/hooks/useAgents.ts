@@ -20,7 +20,7 @@ export const useAgents = () => {
         }
     }, []);
 
-    const createAgent = useCallback(async (newAgentData: Omit<Agent, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const createAgent = useCallback(async (newAgentData: Omit<Agent, 'id'>) => {
         try {
             await api("/agents", { method: "POST", data: newAgentData });
             fetchAgents(); // Refresh the list
@@ -29,7 +29,7 @@ export const useAgents = () => {
         }
     }, [fetchAgents]);
 
-    const updateAgent = useCallback(async (id: number, updatedAgentData: Omit<Agent, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const updateAgent = useCallback(async (id: number, updatedAgentData: Omit<Agent, 'id'>) => {
         try {
             await api(`/agents/${id}`, { method: "PUT", data: updatedAgentData });
             fetchAgents(); // Refresh the list
