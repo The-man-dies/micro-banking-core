@@ -62,8 +62,8 @@ export default function AgentTable({ agents, onEdit, onDelete }: Props) {
                                         <div className="avatar placeholder">
                                             <div className="bg-neutral text-neutral-content rounded-xl w-10 flex items-center justify-center">
                                                 <span className="text-xs font-bold">
-                                                    {(agent.firstname?.[0] || "").toUpperCase()}
-                                                    {(agent.lastname?.[0] || "").toUpperCase()}
+                                                    {(agent.firstname.trim()[0] || "").toUpperCase()}
+                                                    {(agent.lastname.trim()[0] || "").toUpperCase()}
                                                 </span>
                                             </div>
                                         </div>
