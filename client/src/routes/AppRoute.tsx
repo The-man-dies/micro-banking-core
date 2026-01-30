@@ -1,14 +1,14 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import MainLayout from "../features/layout/main/MainLayout";
-import AgentPage from "../features/agents/routes/AgentPage";
-import ClientPage from "../features/clients/routes/ClientPage";
-import AdminProfilePage from "../features/admin/routes/AdminProfilePage";
-import TransactionsPage from "../features/transactions/routes/TransactionsPage";
-import ComptabilitePage from "../features/comptabilite/routes/ComptabilitePage";
-import LoginPage from "../features/auth/routes/LoginPage";
-import AuthLayout from "../features/auth/AuthLayout";
-import DashboardPage from "../features/dashboard/routes/DashboardPage";
-import { ProtectedRoute } from "../components/ProtectedRoute";
+import MainLayout from "@/features/layout/main/MainLayout";
+import AgentPage from "@/features/agents/routes/AgentPage";
+import ClientPage from "@/features/clients/routes/ClientPage";
+import AdminProfilePage from "@/features/admin/routes/AdminProfilePage";
+import TransactionsPage from "@/features/transactions/routes/TransactionsPage";
+import ComptabilitePage from "@/features/comptabilite/routes/ComptabilitePage";
+import LoginPage from "@/features/auth/routes/LoginPage";
+import AuthLayout from "@/features/auth/AuthLayout";
+import DashboardPage from "@/features/dashboard/routes/DashboardPage";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const RootRedirect = () => {
     const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
