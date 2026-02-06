@@ -1,6 +1,6 @@
 import type { Database } from "sqlite";
 import logger from "../config/logger";
-import { getDbConnection } from "../services/database";
+import { databaseService } from "../services/database";
 import { AgentType, AgentDto } from '../types/agent.types';
 
 export interface AgentModel {
@@ -12,7 +12,7 @@ export interface AgentModel {
 
 class Agent implements AgentModel {
     public async create(agent: AgentDto): Promise<AgentType> {
-        let dbConnection: Database | null = await getDbConnection();
+        const dbConnection = await databaseService.getDbConnection();
         try {
             const result = await dbConnection.run(
             `INSERT INTO Agent (firstname, lastname, email, location) VALUES (?, ?, ?, ?)`,
@@ -34,7 +34,7 @@ class Agent implements AgentModel {
     }
 
     public async findById(id: string): Promise<AgentType | null> {
-        let dbConnection = await getDbConnection();
+        const dbConnection = await databaseService.getDbConnection();
 
         try {
             const row = await dbConnection.get(
@@ -58,7 +58,7 @@ class Agent implements AgentModel {
     }
 
     public async update(id: string, agent: Partial<AgentType>): Promise<AgentType | null> {
-        let dbConnection = await getDbConnection();
+        const dbConnection = await databaseService.getDbConnection();
         try {
             const existingAgent = await this.findById(id);
             if (!existingAgent) return null;
@@ -83,7 +83,7 @@ class Agent implements AgentModel {
         }
     }
     public async delete(id: string): Promise<boolean> {
-        let dbConnection = await getDbConnection();
+        const dbConnection = await databaseService.getDbConnection();
         try {
             const result = await dbConnection.run(
                 `DELETE FROM Agent WHERE id = ?`,

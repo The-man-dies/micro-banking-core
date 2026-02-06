@@ -24,7 +24,7 @@ export const useClients = () => {
         fetchClients();
     }, [fetchClients]);
 
-    const createClient = useCallback(async (newClientData: Omit<Client, 'id' | 'accountBalance' | 'accountStatus' | 'createdAt' | 'updatedAt'>) => {
+    const createClient = useCallback(async (newClientData: Omit<Client, 'id' | 'accountBalance' | 'accountExpiresAt' | 'status'>) => {
         try {
             await api("/clients", { method: "POST", data: newClientData });
             fetchClients(); // Refresh the list
@@ -33,7 +33,7 @@ export const useClients = () => {
         }
     }, [fetchClients]);
 
-    const updateClient = useCallback(async (id: number, updatedClientData: Partial<Omit<Client, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    const updateClient = useCallback(async (id: number, updatedClientData: Partial<Omit<Client, 'id' | 'accountBalance' | 'accountExpiresAt' | 'status'>>) => {
         try {
             await api(`/clients/${id}`, { method: "PUT", data: updatedClientData });
             fetchClients(); // Refresh the list

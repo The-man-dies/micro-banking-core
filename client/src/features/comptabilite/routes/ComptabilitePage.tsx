@@ -1,4 +1,3 @@
-import React from 'react';
 import { useComptabilite } from '../hooks/useComptabilite';
 import {
     TransactionTimeSeriesChart,

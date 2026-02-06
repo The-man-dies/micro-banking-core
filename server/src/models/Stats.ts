@@ -1,4 +1,4 @@
-import { getDbConnection } from "../services/database";
+import { databaseService } from "../services/database";
 import logger from "../config/logger";
 
 type TimeSeriesPoint = { date: string; value: number };
@@ -29,7 +29,7 @@ type SumBalanceResult = { 'SUM(accountBalance)': number | null } | undefined;
 
 class StatsModel implements IStatsModel {
     public async getGeneralKPIs() {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         try {
             const totalClients = (await db.get<CountResult>('SELECT COUNT(*) FROM Client'))?.['COUNT(*)'] || 0;
             const activeClients = (await db.get<CountResult>("SELECT COUNT(*) FROM Client WHERE status = 'active'"))?.['COUNT(*)'] || 0;
@@ -43,7 +43,7 @@ class StatsModel implements IStatsModel {
     }
 
     public async getFinancialStats() {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         try {
             const totalBalance = (await db.get<SumBalanceResult>('SELECT SUM(accountBalance) FROM Client'))?.['SUM(accountBalance)'] || 0;
             
@@ -85,7 +85,7 @@ class StatsModel implements IStatsModel {
     }
 
     public async getTimeSeriesData() {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         try {
             const revenueData = await db.all<RawTimeSeriesPoint[]>(
                 `SELECT strftime('%Y-%m-%d', createdAt) as date, SUM(amount) as value FROM Transactions WHERE type IN ('FraisInscription', 'FraisReactivation') GROUP BY date ORDER BY date ASC`

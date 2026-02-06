@@ -5,13 +5,13 @@ import { AuthRequest } from '../types/express.d';
 import Client from '../models/Client';
 import Ticket from '../models/Ticket';
 import Transaction from '../models/Transaction';
-import { getDbConnection } from '../services/database';
+import { databaseService } from '../services/database';
 import { ClientDto } from '../types/client.types';
 
 export const createClient = async (req: AuthRequest, res: Response) => {
-    const db = await getDbConnection();
+    const db = await databaseService.getDbConnection();
     try {
-        const { montantEngagement, ...clientData } = req.body as ClientDto & { montantEngagement: number };
+        const { montantEngagement, ...clientData } = req.body as ClientDto;
 
         await db.run('BEGIN');
 
@@ -52,7 +52,7 @@ export const createClient = async (req: AuthRequest, res: Response) => {
 };
 
 export const depositToAccount = async (req: AuthRequest, res: Response) => {
-    const db = await getDbConnection();
+    const db = await databaseService.getDbConnection();
     try {
         const clientId = parseInt(req.params.id, 10);
         const { amount } = req.body;
@@ -99,7 +99,7 @@ export const depositToAccount = async (req: AuthRequest, res: Response) => {
 };
 
 export const renewAccount = async (req: AuthRequest, res: Response) => {
-    const db = await getDbConnection();
+    const db = await databaseService.getDbConnection();
     try {
         const clientId = parseInt(req.params.id, 10);
         const { fraisReactivation } = req.body;
@@ -162,7 +162,7 @@ export const getClientById = async (req: AuthRequest, res: Response) => {
 
 export const getAllClients = async (req: AuthRequest, res: Response) => {
     try {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         const clients = await db.all('SELECT * FROM Client');
         return ApiResponse.success(res, 'Clients retrieved successfully', clients);
     } catch (error) {
@@ -201,7 +201,7 @@ export const deleteClient = async (req: AuthRequest, res: Response) => {
 };
 
 export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
-    const db = await getDbConnection();
+    const db = await databaseService.getDbConnection();
     try {
         const clientId = parseInt(req.params.id, 10);
 

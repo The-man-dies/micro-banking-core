@@ -4,10 +4,10 @@ import logger from '../config/logger';
 import { AuthRequest } from '../types/express.d';
 import Ticket from '../models/Ticket';
 import { TicketDto } from '../types/ticket.types';
-import { getDbConnection } from '../services/database';
+import { databaseService } from '../services/database';
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
-    const db = await getDbConnection();
+    const db = await databaseService.getDbConnection();
     try {
         const ticketData: TicketDto = req.body;
         // The create method now requires a db instance for potential transactions
@@ -69,7 +69,7 @@ export const deleteTicket = async (req: AuthRequest, res: Response) => {
 // You might also want a getAllTickets function
 export const getAllTickets = async (req: AuthRequest, res: Response) => {
     try {
-        const db = await getDbConnection();
+        const db = await databaseService.getDbConnection();
         const tickets = await db.all('SELECT id, description, status, clientId FROM Ticket');
         logger.info('All tickets retrieved successfully.');
         return ApiResponse.success(res, 'Tickets retrieved successfully', tickets);

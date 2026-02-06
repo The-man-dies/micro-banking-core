@@ -1,4 +1,4 @@
-import { getDbConnection, initializeDatabase } from '../../services/database';
+import { databaseService } from '../../services/database';
 import { getDashboardStats, getTimeSeriesStats } from '../stats.controller';
 import { Request, Response } from 'express';
 import { Database } from 'sqlite';
@@ -27,8 +27,8 @@ describe('Stats Controller', () => {
   let db: Database;
 
   beforeAll(async () => {
-    db = await getDbConnection();
-    await initializeDatabase(db);
+    db = await databaseService.getDbConnection();
+    await databaseService.initializeDatabase(db);
 
     // Seed data for tests
     await db.run("INSERT INTO Agent (id, firstname, lastname) VALUES (1, 'Test', 'Agent'), (2, 'Second', 'Agent')");
@@ -62,10 +62,9 @@ describe('Stats Controller', () => {
       const req = mockRequest() as Request;
       const res = mockResponse() as Response;
 
-      const originalGetDb = require('../../services/database').getDbConnection;
-      require('../../services/database').getDbConnection = jest.fn().mockResolvedValue(db);
+      const getDbConnectionSpy = jest.spyOn(databaseService, 'getDbConnection').mockResolvedValue(db);
       await getDashboardStats(req, res);
-      require('../../services/database').getDbConnection = originalGetDb;
+      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
@@ -90,10 +89,9 @@ describe('Stats Controller', () => {
         const req = mockRequest() as Request;
         const res = mockResponse() as Response;
 
-        const originalGetDb = require('../../services/database').getDbConnection;
-        require('../../services/database').getDbConnection = jest.fn().mockResolvedValue(db);
+        const getDbConnectionSpy = jest.spyOn(databaseService, 'getDbConnection').mockResolvedValue(db);
         await getTimeSeriesStats(req, res);
-        require('../../services/database').getDbConnection = originalGetDb;
+        getDbConnectionSpy.mockRestore();
 
         expect(res.status).toHaveBeenCalledWith(200);
         const { data } = (res.json as jest.Mock).mock.calls[0][0];
