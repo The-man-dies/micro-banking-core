@@ -18,8 +18,8 @@ export const checkAccountStatus = async (req: AuthRequest, res: Response, next: 
         }
 
         
-        const isDepositOperation = req.method === 'POST' && req.originalUrl.includes('/deposit');
-        const isPayoutOperation = req.method === 'POST' && req.originalUrl.includes('/payout');
+        const isDepositOperation = req.method === 'POST' && req.path.endsWith('/deposit');
+        const isPayoutOperation = req.method === 'POST' && req.path.endsWith('/payout');
 
         if (client.status === 'withdraw_only') {
             if (isDepositOperation) {
