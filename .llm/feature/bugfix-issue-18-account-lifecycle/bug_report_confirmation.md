@@ -1,0 +1,1 @@
+I have created the bug report file `bug_report_account_lifecycle.md`. Please confirm if the issue description is accepted.
