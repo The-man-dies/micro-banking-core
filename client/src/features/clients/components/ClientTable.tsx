@@ -1,11 +1,29 @@
 import { useState } from "react";
 import type { Client } from "../types";
+import { useCountdown } from '../hooks/useCountdown';
 import {
     Edit, Trash2Icon, DollarSign, RefreshCw,
     MinusCircle, Eye, User, Phone,
     Mail, ShieldCheck, X, AlertCircle, CheckCircle2,
     MapPin
 } from "lucide-react";
+
+// CountdownDisplay Component (Helper for client expiration)
+const CountdownDisplay = ({ expiresAt }: { expiresAt: string }) => {
+    const countdown = useCountdown(expiresAt);
+
+    return (
+        <div className="bg-base-200/50 rounded-xl p-4 mb-6">
+            <div className="stat-title text-xs uppercase tracking-wider opacity-70 mb-2">Expiration du Compte</div>
+            <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-primary" />
+                <span className={`stat-value text-xl ${countdown.isExpired ? 'text-error' : 'text-primary'}`}>
+                    {countdown.formatted}
+                </span>
+            </div>
+        </div>
+    );
+};
 
 type Props = {
     clients: Client[];
@@ -192,6 +210,11 @@ export default function ClientTable({ clients, onEdit, onDelete, onFinancialOp }
                                     <div className="stat-value text-xl text-primary">{viewingClient.montantEngagement?.toLocaleString() || 0} <span className="text-xs font-normal opacity-50">FCFA</span></div>
                                 </div>
                             </div>
+
+                            {/* Countdown Display */}
+                            {viewingClient.accountExpiresAt && (
+                                <CountdownDisplay expiresAt={viewingClient.accountExpiresAt} />
+                            )}
 
                             <div className="space-y-4 bg-base-200/30 p-4 rounded-xl border border-base-200">
                                 <div className="flex items-center gap-3">
