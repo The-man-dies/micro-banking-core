@@ -28,6 +28,24 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
 
     const clientLabel = `${client.firstname} ${client.lastname}`;
 
+    const statusTranslations: Record<Client['status'], string> = {
+        active: 'Actif',
+        withdraw_only: 'Retrait Uniquement',
+        expired: 'Expiré',
+    };
+    const translatedStatus = statusTranslations[client.status] || client.status;
+
+    let formDisabledReason: string | null = null;
+    if (operationType === 'deposit' && (client.status === 'withdraw_only' || client.status === 'expired')) {
+        formDisabledReason = client.status === 'withdraw_only'
+            ? "Les dépôts ne sont pas autorisés pour un compte en mode Retrait Uniquement."
+            : "Les dépôts ne sont pas autorisés pour un compte expiré.";
+    } else if (operationType === 'payout' && client.status === 'expired') {
+        formDisabledReason = "Les retraits ne sont pas autorisés pour un compte expiré.";
+    }
+
+
+
     const title =
         operationType === 'deposit' ? `Déposer sur le compte de ${clientLabel}` :
             operationType === 'payout' ? `Retirer du compte de ${clientLabel}` :
@@ -47,6 +65,8 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
         setError(null);
         setIsSubmitting(true);
 
+
+
         try {
             if (operationType === 'renew') {
                 await onSubmit(client.id);
@@ -58,6 +78,21 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
                     setIsSubmitting(false);
                     return;
                 }
+
+                // New Frontend Validation for Payouts
+                if (operationType === 'payout') {
+                    if (client.accountBalance === 0) {
+                        setError("Impossible de retirer. Le solde du compte est de zéro.");
+                        setIsSubmitting(false);
+                        return;
+                    }
+                    if (numericAmount > client.accountBalance) {
+                        setError("Le montant du retrait ne peut pas être supérieur au solde disponible.");
+                        setIsSubmitting(false);
+                        return;
+                    }
+                }
+
 
                 // VALIDATION: Deposit amount must equal engagement amount
                 if (operationType === 'deposit' && client.montantEngagement && numericAmount !== client.montantEngagement) {
@@ -108,6 +143,9 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
                         <p className="text-sm opacity-70">
                             Solde actuel: <span className="font-bold opacity-100">{client.accountBalance.toLocaleString()} FCFA</span>
                         </p>
+                        <p className="text-sm opacity-70">
+                            Statut du compte: <span className="font-bold opacity-100">{translatedStatus}</span>
+                        </p>
                     </div>
 
                     {operationType !== 'renew' && (
@@ -124,7 +162,11 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
                                 value={amount}
                                 onChange={handleAmountChange}
                                 autoComplete="off"
+                                disabled={!!formDisabledReason || isSubmitting}
                             />
+                            {formDisabledReason && (
+                                <div className="text-warning text-sm mt-2">{formDisabledReason}</div>
+                            )}
                         </div>
                     )}
 
@@ -139,7 +181,7 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
                             <button type="button" className="btn btn-ghost flex-1 hover:bg-base-200" onClick={onClose} disabled={isSubmitting}>
                                 Annuler
                             </button>
-                            <button type="submit" className="btn btn-primary flex-1 shadow-lg shadow-primary/20" disabled={isSubmitting}>
+                            <button type="submit" className="btn btn-primary flex-1 shadow-lg shadow-primary/20" disabled={!!formDisabledReason || isSubmitting}>
                                 {isSubmitting ? (
                                     <>
                                         <span className="loading loading-spinner loading-sm"></span>

@@ -204,6 +204,7 @@ export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
     const db = await databaseService.getDbConnection();
     try {
         const clientId = parseInt(req.params.id, 10);
+        const { amount: withdrawalAmount } = req.body; // Expect withdrawal amount from body
 
         await db.run('BEGIN');
 
@@ -213,30 +214,54 @@ export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
             return ApiResponse.error(res, 'Client not found', null, 404);
         }
 
-        const amountToPayout = client.accountBalance;
-
-        if (amountToPayout <= 0) {
+        // --- Strict Backend Validation Rules ---
+        // 1. withdrawalAmount must be strictly greater than 0
+        if (withdrawalAmount <= 0) {
             await db.run('ROLLBACK');
-            return ApiResponse.error(res, 'No balance to payout for this client.', null, 400);
+            return ApiResponse.error(res, 'Le montant du retrait doit être supérieur à zéro.', null, 400);
         }
 
-        await Client.update(clientId, { accountBalance: 0, status: 'expired' }, db); 
+        // 2. If availableBalance == 0, the request must be rejected
+        if (client.accountBalance === 0) {
+            await db.run('ROLLBACK');
+            return ApiResponse.error(res, 'Impossible de retirer. Le solde du compte est de zéro.', null, 400);
+        }
+
+        // 3. withdrawalAmount must be strictly less than or equal to the available account balance
+        // 4. If withdrawalAmount > availableBalance, the request must be rejected
+        if (withdrawalAmount > client.accountBalance) {
+            await db.run('ROLLBACK');
+            return ApiResponse.error(res, 'Le montant du retrait ne peut pas être supérieur au solde disponible.', null, 400);
+        }
+
+        const newBalance = client.accountBalance - withdrawalAmount; 
+        
+        let newStatus = client.status; 
+        const now = new Date();
+        const expiresAt = new Date(client.accountExpiresAt);
+
+        // Transition to 'expired' only if new balance is 0 AND account is past its expiration
+        if (newBalance === 0 && now > expiresAt) {
+            newStatus = 'expired';
+        }
+
+        await Client.update(clientId, { accountBalance: newBalance, status: newStatus }, db); 
 
         await Transaction.create({
             clientId: client.id,
-            amount: amountToPayout,
+            amount: withdrawalAmount, // Use the actual withdrawal amount
             type: 'Retrait',
-            description: `Retrait complet du solde du compte après cycle de 30 jours.`
+            description: `Retrait du compte.`
         }, db);
 
         await db.run('COMMIT');
 
-        logger.info(`Client account ${clientId} paid out successfully. Amount: ${amountToPayout}`);
-        return ApiResponse.success(res, 'Client account paid out successfully', { clientId, amountPaidOut: amountToPayout });
+        logger.info(`Client account ${clientId} withdrawn successfully. Amount: ${withdrawalAmount}. New balance: ${newBalance}`);
+        return ApiResponse.success(res, 'Client account withdrawn successfully', { clientId, amountWithdrawn: withdrawalAmount, newBalance });
 
     } catch (error) {
         await db.run('ROLLBACK');
-        logger.error('Error paying out client account:', { error });
-        return ApiResponse.error(res, 'Failed to pay out client account', null, 500);
+        logger.error('Error processing client account withdrawal:', { error });
+        return ApiResponse.error(res, 'Failed to process client account withdrawal', null, 500);
     }
 };
