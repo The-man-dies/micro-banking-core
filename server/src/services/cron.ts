@@ -25,18 +25,34 @@ export const checkAndExpireAccounts = async () => {
         // Find candidates first to log them (optional but good for audit)
         // Or just run the update and check changes.
 
-        const result = await db.run(
+        // Transition active accounts with positive balance past their expiry to 'withdraw_only'
+        const withdrawOnlyResult = await db.run(
             `UPDATE Client 
-             SET status = 'expired' 
+             SET status = 'withdraw_only' 
              WHERE status = 'active' 
-             AND accountExpiresAt < ?`,
+             AND accountExpiresAt < ?
+             AND balance > 0`,
             now
         );
 
-        if (result.changes && result.changes > 0) {
-            logger.info(`Expired ${result.changes} client accounts found with past expiration date.`);
-        } else {
-            logger.debug("No expired accounts found."); // Optional debug log
+        if (withdrawOnlyResult.changes && withdrawOnlyResult.changes > 0) {
+            logger.info(`Transitioned ${withdrawOnlyResult.changes} active client accounts to 'withdraw_only'.`);
+        }
+
+        // Transition active accounts with zero balance past their expiry to 'expired'
+        const expiredResult = await db.run(
+            `UPDATE Client 
+             SET status = 'expired' 
+             WHERE status = 'active' 
+             AND accountExpiresAt < ?
+             AND balance = 0`,
+            now
+        );
+
+        if (expiredResult.changes && expiredResult.changes > 0) {
+            logger.info(`Expired ${expiredResult.changes} client accounts with zero balance.`);
+        } else if (withdrawOnlyResult.changes === 0) {
+            logger.debug("No active accounts to transition.");
         }
 
     } catch (error) {

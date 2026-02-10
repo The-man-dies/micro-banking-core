@@ -17,15 +17,18 @@ export const checkAccountStatus = async (req: AuthRequest, res: Response, next: 
             return ApiResponse.error(res, 'Client not found', null, 404);
         }
 
-        const now = new Date();
-        const expiresAt = new Date(client.accountExpiresAt);
+        
+        const isDepositOperation = req.method === 'POST' && req.path.endsWith('/deposit');
+        const isPayoutOperation = req.method === 'POST' && req.path.endsWith('/payout');
 
-        // Check if the account is expired and the status needs updating
-        if (now > expiresAt && client.status === 'active') {
-            logger.info(`Client account ${client.id} has expired. Updating status.`);
-            const db = await databaseService.getDbConnection();
-            await db.run('UPDATE Client SET status = ? WHERE id = ?', ['expired', client.id]);
-            client.status = 'expired'; // Update the object for the current request
+        if (client.status === 'withdraw_only') {
+            if (isDepositOperation) {
+                return ApiResponse.error(res, 'Deposits are not allowed in withdraw_only status.', null, 403);
+            }
+        } else if (client.status === 'expired') {
+            if (isDepositOperation || isPayoutOperation) {
+                return ApiResponse.error(res, 'Account is expired. No transactions allowed.', null, 403);
+            }
         }
         
         // Attach client to the request object for subsequent middleware/controllers
