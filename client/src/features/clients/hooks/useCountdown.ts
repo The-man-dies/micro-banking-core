@@ -15,7 +15,7 @@ const EXPIRED_COUNTDOWN: Countdown = {
     minutes: 0,
     seconds: 0,
     isExpired: true,
-    formatted: 'Expired',
+    formatted: 'Expiré',
 };
 
 const calculateTimeRemaining = (expiresAt: string): Countdown => {
