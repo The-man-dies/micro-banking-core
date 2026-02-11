@@ -9,20 +9,27 @@ interface Countdown {
     formatted: string;
 }
 
+const EXPIRED_COUNTDOWN: Countdown = {
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    isExpired: true,
+    formatted: 'Expired',
+};
+
 const calculateTimeRemaining = (expiresAt: string): Countdown => {
     const expirationDate = new Date(expiresAt).getTime();
+
+    if (Number.isNaN(expirationDate)) {
+        return EXPIRED_COUNTDOWN;
+    }
+
     const now = new Date().getTime();
     const difference = expirationDate - now;
 
     if (difference <= 0) {
-        return {
-            days: 0,
-            hours: 0,
-            minutes: 0,
-            seconds: 0,
-            isExpired: true,
-            formatted: 'Expiré',
-        };
+        return EXPIRED_COUNTDOWN;
     }
 
     const days = Math.floor(difference / (1000 * 60 * 60 * 24));
@@ -46,12 +53,16 @@ export const useCountdown = (expiresAt: string): Countdown => {
     const [countdown, setCountdown] = useState<Countdown>(() => calculateTimeRemaining(expiresAt));
 
     useEffect(() => {
+        if (countdown.isExpired) {
+            return;
+        }
+
         const timer = setInterval(() => {
             setCountdown(calculateTimeRemaining(expiresAt));
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [expiresAt]);
+    }, [expiresAt, countdown.isExpired]);
 
     return countdown;
 };
