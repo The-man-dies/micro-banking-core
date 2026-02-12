@@ -79,17 +79,17 @@ const ChartWrapper = ({ title, children }: { title: string; children: React.Reac
 const NoData = () => <p className="text-gray-400 text-center mt-10">Données non disponibles.</p>;
 
 // Transaction Time Series Line Chart
-export const TransactionTimeSeriesChart: React.FC<{ data: any[] | undefined }> = ({ data }) => {
+export const TransactionTimeSeriesChart: React.FC<{ data: any[] | undefined, title?: string }> = ({ data, title }) => {
     if (!data || data.length === 0) {
-        return <ChartWrapper title="Évolution des Transactions"><NoData /></ChartWrapper>;
+        return <ChartWrapper title={title || "Évolution des Transactions"}><NoData /></ChartWrapper>;
     }
 
     const chartData = {
         labels: data.map(d => new Date(d.date).toLocaleDateString()),
         datasets: [
             {
-                label: "Nombre de transactions",
-                data: data.map(d => d.count),
+                label: "Montant Total",
+                data: data.map(d => d.totalAmount),
                 borderColor: "rgb(99, 102, 241)",
                 backgroundColor: "rgba(99, 102, 241, 0.1)",
                 fill: true,
@@ -98,16 +98,38 @@ export const TransactionTimeSeriesChart: React.FC<{ data: any[] | undefined }> =
         ],
     };
 
+    const options = {
+        ...defaultOptions,
+        plugins: {
+            ...defaultOptions.plugins,
+            tooltip: {
+                ...defaultOptions.plugins.tooltip,
+                callbacks: {
+                    label: function (context: any) {
+                        const item = data[context.dataIndex];
+                        if (item) {
+                            return [
+                                `Montant Total: ${item.totalAmount ?? 0} FCFA`,
+                                `Nombre de Transactions: ${item.transactionCount ?? 0}`,
+                            ];
+                        }
+                        return '';
+                    }
+                }
+            }
+        }
+    }
+
     return (
-        <ChartWrapper title="Évolution des Transactions">
-            <Line data={chartData} options={defaultOptions} />
+        <ChartWrapper title={title || "Évolution des Transactions"}>
+            <Line data={chartData} options={options} />
         </ChartWrapper>
     );
 };
 
 // Account Status Doughnut Chart
 export const CategoryStatsChart: React.FC<{ data: any | undefined }> = ({ data }) => {
-    if (!data) {
+    if (!data || Object.keys(data).length === 0) {
          return <ChartWrapper title="Répartition par Statut de Compte"><NoData /></ChartWrapper>;
     }
     
@@ -161,7 +183,7 @@ export const AgentDistributionChart: React.FC<{ data: any[] | undefined }> = ({ 
 
 // Weekly Amount Bar Chart
 export const WeeklyAmountChart: React.FC<{ data: any | undefined }> = ({ data }) => {
-    if (!data) {
+    if (!data || Object.keys(data).length === 0) {
         return <ChartWrapper title="Montants Gérés par Jour"><NoData /></ChartWrapper>;
     }
     

@@ -4,7 +4,8 @@ import type { TransactionDto, TransactionType } from '../types/transaction.types
 
 export interface ITransactionModel {
     create(transaction: TransactionDto, db: Database): Promise<TransactionType>;
-    getAll(db: Database): Promise<TransactionType[]>;
+    getAll(db: Database, fiscalYear: number): Promise<TransactionType[]>;
+    getAccounting(db: Database, fiscalYear: number, thirtyDaysAgoFormatted: string): Promise<TransactionType[]>;
 }
 
 class TransactionModel implements ITransactionModel {
@@ -36,14 +37,28 @@ class TransactionModel implements ITransactionModel {
         }
     }
 
-    public async getAll(db: Database): Promise<(TransactionType & { agentId: number })[]> {
+    public async getAll(db: Database, fiscalYear: number): Promise<(TransactionType & { agentId: number })[]> {
         try {
             const transactions = await db.all<(TransactionType & { agentId: number })[]>(
-                `SELECT t.*, c.agentId FROM Transactions AS t JOIN Client AS c ON t.clientId = c.id ORDER BY t.createdAt DESC`
+                `SELECT t.*, c.agentId FROM Transactions AS t JOIN Client AS c ON t.clientId = c.id WHERE t.fiscalYear = ? ORDER BY t.createdAt DESC`,
+                [fiscalYear]
             );
             return transactions;
         } catch (error) {
             logger.error('Error fetching all transactions:', { error });
+            throw error;
+        }
+    }
+
+    public async getAccounting(db: Database, fiscalYear: number, thirtyDaysAgoFormatted: string): Promise<(TransactionType & { agentId: number })[]> {
+        try {
+            const transactions = await db.all<(TransactionType & { agentId: number })[]>(
+                `SELECT t.*, c.agentId FROM Transactions AS t JOIN Client AS c ON t.clientId = c.id WHERE t.fiscalYear = ? AND strftime('%Y-%m-%d', t.createdAt) >= ? ORDER BY t.createdAt DESC`,
+                [fiscalYear, thirtyDaysAgoFormatted]
+            );
+            return transactions;
+        } catch (error) {
+            logger.error('Error fetching accounting transactions:', { error });
             throw error;
         }
     }

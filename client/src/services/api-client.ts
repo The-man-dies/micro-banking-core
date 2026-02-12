@@ -24,23 +24,23 @@ axiosInstance.interceptors.request.use(
 );
 
 // Define a generic api function
-const api = async <T = any>(
-    endpoint: string,
-    options: AxiosRequestConfig = {}
-): Promise<AxiosResponse<T>> => {
-    try {
-        const response = await axiosInstance({
-            url: endpoint,
-            ...options,
-        });
-        return response;
-    } catch (error: any) {
-        // Axios wraps the error, so we extract the relevant part
-        const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
-        // To keep the error handling consistent with the previous implementation,
-        // we throw an error with just the message string.
-        throw new Error(errorMessage);
-    }
-};
+// const api = async <T = any>(
+//     endpoint: string,
+//     options: AxiosRequestConfig = {}
+// ): Promise<AxiosResponse<T>> => {
+//     try {
+//         const response = await axiosInstance({
+//             url: endpoint,
+//             ...options,
+//         });
+//         return response;
+//     } catch (error: any) {
+//         // Axios wraps the error, so we extract the relevant part
+//         const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
+//         // To keep the error handling consistent with the previous implementation,
+//         // we throw an error with just the message string.
+//         throw new Error(errorMessage);
+//     }
+// };
 
-export default api;
+export default axiosInstance;
