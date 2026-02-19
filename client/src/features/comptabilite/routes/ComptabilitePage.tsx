@@ -1,5 +1,6 @@
 import { useComptabilite } from "../hooks/useComptabilite";
 import { TransactionTimeSeriesChart } from "../../dashboard/components/Charts"; // Import TransactionTimeSeriesChart
+import { ErrorComponent } from "@/components/ui/Error";
 
 const StatCard = ({
   title,
@@ -31,9 +32,7 @@ const ComptabilitePage = () => {
   }
 
   if (error) {
-    return (
-      <div className="text-center py-10 text-red-500">Erreur: {error}</div>
-    );
+    return <ErrorComponent message={error} />;
   }
 
   // Calculate totals for the StatCards

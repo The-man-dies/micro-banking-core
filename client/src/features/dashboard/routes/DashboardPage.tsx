@@ -1,5 +1,6 @@
 import { useDashboard } from "../hooks/useDashboard";
 import KPICard from "../components/KPICard";
+import { ErrorComponent } from "@/components/ui/Error";
 import {
   CategoryStatsChart,
   AgentDistributionChart,
@@ -8,8 +9,13 @@ import {
 import { DashboardCombinedTransactionsChart } from "../components/DashboardCombinedTransactionsChart"; // Import the new chart
 
 const DashboardPage = () => {
-  const { stats, timeSeries, accountingData, isLoading, error } =
-    useDashboard(); // Get accountingData
+  const {
+    stats,
+    timeSeries,
+    accountingData,
+    isLoading,
+    error: errorMsg,
+  } = useDashboard(); // Get accountingData
 
   if (isLoading) {
     return (
@@ -39,15 +45,8 @@ const DashboardPage = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-900 text-red-400">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Une erreur est survenue</h2>
-          <p>{error}</p>
-        </div>
-      </div>
-    );
+  if (errorMsg) {
+    return <ErrorComponent message={errorMsg} />;
   }
 
   return (
