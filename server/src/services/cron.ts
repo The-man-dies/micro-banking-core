@@ -31,7 +31,7 @@ export const checkAndExpireAccounts = async () => {
              SET status = 'withdraw_only' 
              WHERE status = 'active' 
              AND accountExpiresAt < ?
-             AND balance > 0`,
+             AND accountBalance > 0`,
             now
         );
 
@@ -45,7 +45,7 @@ export const checkAndExpireAccounts = async () => {
              SET status = 'expired' 
              WHERE status = 'active' 
              AND accountExpiresAt < ?
-             AND balance = 0`,
+             AND accountBalance = 0`,
             now
         );
 

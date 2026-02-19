@@ -19,9 +19,8 @@ import {
 } from "lucide-react";
 
 // CountdownDisplay Component (Helper for client expiration)
-const CountdownDisplay = ({ expiresAt }: { expiresAt: string }) => {
-  const countdown = useCountdown(expiresAt);
-
+const CountdownDisplay = ({ expiresAt, status }: { expiresAt: string, status: string }) => {
+    const countdown = useCountdown(expiresAt, status);
   return (
     <div className="bg-base-200/50 rounded-xl p-4 mb-6">
       <div className="stat-title text-xs uppercase tracking-wider opacity-70 mb-2">
@@ -271,7 +270,7 @@ export default function ClientTable({
 
               {/* Countdown Display */}
               {viewingClient.accountExpiresAt && (
-                <CountdownDisplay expiresAt={viewingClient.accountExpiresAt} />
+                <CountdownDisplay expiresAt={viewingClient.accountExpiresAt} status={viewingClient.status} />
               )}
 
               <div className="space-y-4 bg-base-200/30 p-4 rounded-xl border border-base-200">
@@ -403,12 +402,14 @@ export default function ClientTable({
                   onExpire(financialClient.id);
                   setFinancialClient(null);
                 }}
-                disabled={financialClient.accountBalance !== 0}
+                disabled={financialClient.accountBalance !== 0 || financialClient.status === 'expired'}
                 className="btn btn-outline btn-error w-full justify-start gap-3 tooltip"
                 data-tip={
-                  financialClient.accountBalance !== 0
-                    ? "Le solde doit être zéro pour expirer le compte"
-                    : "Expirer le compte"
+                  financialClient.status === 'expired'
+                    ? "Le compte est déjà expiré"
+                    : financialClient.accountBalance !== 0
+                      ? "Le solde doit être zéro pour expirer le compte"
+                      : "Expirer le compte"
                 }
               >
                 <X size={18} /> Expirer le compte

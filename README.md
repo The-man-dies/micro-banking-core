@@ -102,6 +102,21 @@ flowchart TD
 
 ---
 
+## 🔁 Account Lifecycle & Business Rules
+
+```mermaid
+stateDiagram-v2
+
+    [*] --> Active
+
+    Active --> WithdrawOnly : 30 days passed\nAND balance > 0
+    Active --> Expired : 30 days passed\nAND balance == 0
+
+    WithdrawOnly --> Expired : balance becomes 0
+
+    Expired --> Active : Renew account\n(set accountExpiresAt = now + 30 days)
+```
+
 ## 🛠 Technical Stack
 
 - **Backend:** Node.js + Express + SQLite
