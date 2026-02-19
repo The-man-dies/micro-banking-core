@@ -69,7 +69,13 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
 
         try {
             if (operationType === 'renew') {
-                await onSubmit(client.id);
+                const numericAmount = normalizeCurrencyInput(amount);
+                if (numericAmount <= 0) {
+                    setError("Le montant de réactivation doit être supérieur à zéro.");
+                    setIsSubmitting(false);
+                    return;
+                }
+                await onSubmit(client.id, numericAmount);
             } else { // deposit or payout
                 const numericAmount = normalizeCurrencyInput(amount);
 
@@ -148,10 +154,10 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
                         </p>
                     </div>
 
-                    {operationType !== 'renew' && (
+                    {(operationType === 'deposit' || operationType === 'payout' || operationType === 'renew') && (
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text font-semibold">Montant (FCFA) *</span>
+                                <span className="label-text font-semibold">Montant ({operationType === 'renew' ? 'Frais de Réactivation' : 'FCFA'}) *</span>
                             </label>
                             <input
                                 type="text"
@@ -168,12 +174,6 @@ export default function FinancialOperationForm({ onClose, onSubmit, client, oper
                                 <div className="text-warning text-sm mt-2">{formDisabledReason}</div>
                             )}
                         </div>
-                    )}
-
-                    {operationType === 'renew' && (
-                        <p className="py-4 text-center text-lg font-medium">
-                            Confirmez-vous le renouvellement du compte ?
-                        </p>
                     )}
 
                     <div className="form-control pt-4">

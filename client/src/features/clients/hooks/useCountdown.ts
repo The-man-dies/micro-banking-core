@@ -49,10 +49,16 @@ const calculateTimeRemaining = (expiresAt: string): Countdown => {
     };
 };
 
-export const useCountdown = (expiresAt: string): Countdown => {
+export const useCountdown = (expiresAt: string, status: string): Countdown => {
+    // If the account is expired, immediately return the expired state
+    if (status === 'expired') {
+        return EXPIRED_COUNTDOWN;
+    }
+
     const [countdown, setCountdown] = useState<Countdown>(() => calculateTimeRemaining(expiresAt));
 
     useEffect(() => {
+        // Only run timer if not expired
         if (countdown.isExpired) {
             return;
         }
@@ -62,7 +68,7 @@ export const useCountdown = (expiresAt: string): Countdown => {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [expiresAt, countdown.isExpired]);
+    }, [expiresAt, countdown.isExpired, status]); // Added status to dependency array
 
     return countdown;
 };
