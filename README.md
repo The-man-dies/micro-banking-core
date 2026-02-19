@@ -1,147 +1,158 @@
-# micro-banking-core
+# 🏦 Micro Banking Core
 
-Noyau backend pour une application de micro‑banque. Logique métier et adaptateurs. Projet majoritairement en TypeScript.
+A **local-first banking application** for small-scale banking operations with a single administrative user.  
+This system allows managing agents, clients, and client accounts with strict business rules around engagement payments, account expiration, and renewals.
 
-## Quick Start
+---
 
-```bash
-git clone https://github.com/niagnouma-corporation/micro-banking-core.git
-cd micro-banking-core
-npm install        # ou yarn install
-cp .env.example .env   # si présent
-npm run dev        # vérifier la commande dans package.json
+## 📚 Table of Contents
+
+- [Features](#features)
+- [Business Rules](#business-rules)
+- [User Roles](#user-roles)
+- [Account Lifecycle](#account-lifecycle)
+- [Diagrams](#diagrams)
+- [Technical Stack](#technical-stack)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## ✨ Features
+
+- Local-first architecture with SQLite database and optional migration support.
+- Full admin control over agents and clients.
+- Client accounts with fixed engagement amounts and strict payment rules.
+- Automatic account expiration and renewal.
+- Centralized accounting and transaction history.
+- Frontend dashboard with charts and statistics.
+- Security: DoS protection, token-based authentication, and rate-limited API.
+
+---
+
+## 📜 Business Rules
+
+1. **Client Engagement**
+   - Each client has a **`montantEngagement`** (fixed engagement amount).
+   - Payments must **exactly match** the engagement amount. Partial payments are not allowed.
+
+2. **Payment Schedule**
+   - Clients can pay **any day within a 30-day period**.
+   - The first payment at client creation goes directly to the company.
+   - Subsequent payments are credited to the client account.
+   - Renewal fees follow the same rules: they go to the company and reset the engagement amount.
+
+3. **Account Expiration**
+   - If a client account is empty (balance = 0) and **30 days elapse**, the account expires automatically.
+   - Expired accounts can be renewed by the admin, setting a new engagement period.
+   - If a client deposits money after creation/reactivation and the 30 days elapse, the account switches to **withdraw-only**, blocking new deposits.
+   - The account fully expires once the balance reaches 0, or if it is 0 and the 30 days have elapsed.
+
+4. **Agent-Client Relationship**
+   - A client is linked to **one agent**.
+   - An agent can have **multiple clients**.
+
+---
+
+## 👥 User Roles
+
+1. **Admin**
+   - Create, edit, or delete agents and clients.
+   - Deposit or withdraw from any client account.
+   - Full access to accounting and statistics.
+
+2. **Agent**
+   - Assigned to multiple clients.
+   - Can monitor clients’ accounts and transactions.
+
+3. **Client**
+   - Has a personal account with a fixed engagement amount.
+   - Makes payments according to the rules above.
+
+---
+
+## 🏦 Account Lifecycle
+
+```mermaid
+flowchart TD
+    A[Client Account Created] --> B[First Payment -> Company]
+    B --> C[Subsequent Payments -> Client Balance Updated]
+    C --> D{30 Days Elapsed?}
+    D -->|Balance > 0| E[Account becomes Withdraw-Only]
+    D -->|Balance = 0| F[Account Expires]
+    F --> G[Renewal by Admin sets new montantEngagement]
+    E --> H[Account Expiration occurs when Balance = 0]
 ```
 
-## Business Logic
+---
 
-This document describes the core business logic concerning the client lifecycle and associated financial transactions.
+## 📊 Diagrams
 
-### 1. Client Lifecycle
+### 1️⃣ Admin → Agent → Client Relationship
 
-The client lifecycle is based on a 30-day activity period, initiated by a payment.
+```mermaid
+flowchart TD
+    Admin -->|Manage| Agent
+    Agent -->|Manages multiple| Client
+    Client -->|Linked to 1| Agent
+    Admin -->|Direct actions| Client
+```
 
-#### a. Client Creation
+---
 
-- **Flow**: A new client is created by providing personal information and an `montantEngagement` (commitment amount).
-- **`montantEngagement`**: This is the registration fee paid by the client. This amount **is not** added to their balance. It serves as a reference for the initial contract.
-- **Initial Balance**: The client's `accountBalance` is initialized to **zero**.
-- **Validity**: The account is created with an `active` status and an `accountExpiresAt` date set 30 days in the future.
-- **Traceability**:
-  - A transaction of type `FraisInscription` (Registration Fee) is created in the `Transactions` table to track this fee.
-  - An initial support ticket is also created for the client.
+## 🛠 Technical Stack
 
-#### b. Deposits (Investment)
+- **Backend:** Node.js + Express + SQLite
+- **Frontend:** React + TypeScript
+- **Package Manager:** Bun (official project standard)
+- **Security:** express-rate-limit, token-based authentication
+- **Database Migrations:** PRAGMA checks for schema updates
 
-- **Flow**: Once the account is active, the client can make deposits.
-- **Logic**: Any deposited amount is **added** to the client's `accountBalance`.
-- **Traceability**: Each deposit generates a `Depot` type transaction in the `Transactions` table.
+---
 
-#### c. End of Cycle and Payout
+## ⚙️ Installation
 
-- **Flow**: At the end of the 30-day period (or manually via the API), the agent can perform a "payout" for the client.
-- **Logic**:
-  - The entire `accountBalance` is withdrawn.
-  - The client's `accountBalance` is reset to **zero**.
-  - The account status changes to `expired`.
-- **Traceability**: A `Retrait` (Withdrawal) type transaction is created to record the total amount paid out to the client.
+```bash
+# Clone the repository
+git clone https://github.com/niagnouma/micro-banking-core.git
+cd micro-banking-core
 
-#### d. Account Renewal
+# Remove old node_modules and lockfiles
+rm -rf node_modules
+rm -f package-lock.json pnpm-lock.yaml
 
-- **Flow**: A client with an `expired` (or active) account can renew it for a new 30-day cycle.
-- **Logic**:
-  - The client pays a new fee, called `fraisReactivation` (Reactivation Fee).
-  - This amount updates the client's `montantEngagement` for the new cycle.
-  - The `accountExpiresAt` date is extended by 30 days.
-  - The account status is (re)set to `active`.
-  - **Important**: This fee is not added to the client's `accountBalance`.
-- **Traceability**: A `FraisReactivation` transaction is created to track the renewal fee.
+# Install dependencies using Bun
+bun install
 
-### 2. Financial Traceability
+# Run the backend server
+bun run server/src/app.ts
 
-The `Transactions` table is central to the system. It provides a complete audit trail of all financial flows:
+# Run the frontend (if applicable)
+bun run client/src/main.tsx
+```
 
-- **`FraisInscription`**: Money received by the company when an account is created.
-- **`FraisReactivation`**: Money received by the company when an account is renewed.
-- **`Depot`**: Money belonging to the client, added to their balance.
-- **`Retrait`**: Money belonging to the client, withdrawn from their balance and returned to them.
+---
 
-This separation ensures clear and precise accounting, distinguishing company revenue from client funds.
+## 🚀 Usage
 
-## API Documentation
+- Admin logs in to access the dashboard.
+- Create agents and clients via the admin interface.
+- Monitor payments, account status, and renewals.
+- Access accounting stats for the entire system.
 
-### 1. Authentication API
+---
 
-All authentication endpoints are prefixed with `/api/v1/admin`.
+## 🤝 Contributing
 
-- **POST /api/v1/admin/login**: Authenticate admin and get tokens.
-  - **Body**: `{ "username": "admin_username", "password": "admin_password" }`
-  - **Response**: `{ "success": true, "message": "Login successful", "data": { "accessToken": "jwt.access.token", "refreshToken": "jwt.refresh.token" } }`
+- Fork the repository and create a branch for your feature or fix.
+- Follow the existing code style and commit conventions.
+- Make atomic commits with clear messages.
+- Submit a pull request for review.
 
-- **POST /api/v1/admin/refresh**: Get a new access token using a refresh token.
-  - **Body**: `{ "token": "jwt.refresh.token" }`
-  - **Response**: `{ "success": true, "message": "Access token refreshed", "data": { "accessToken": "new.jwt.access.token" } }`
+---
 
-- **POST /api/v1/admin/logout**: Invalidate a refresh token to log out.
-  - **Body**: `{ "token": "jwt.refresh.token" }`
-  - **Response**: `{ "success": true, "message": "Logout successful" }`
+## 📄 License
 
-- **GET /api/v1/admin/status**: Check the status of the current session token.
-  - **Headers**: `x-auth-token: jwt.access.token`
-  - **Response**: `{ "success": true, "message": "Token is valid", "data": { "user": { "id": 1, "username": "admin" }, "expiresAt": "...", "expiresIn": ... } }`
-
-### 2. Client Management API
-
-Client management API routes are prefixed with `/api/v1/clients`. All these routes require authentication via the `x-auth-token` header.
-
-#### a. Create a New Client
-
-- **URL**: `POST /api/v1/clients`
-- **Description**: Creates a new client, their initial ticket, and records the registration fee transaction. The client's balance starts at 0.
-- **Body (JSON)**:
-
-    ```json
-    {
-      "firstname": "John",
-      "lastname": "Doe",
-      "email": "john.doe@example.com",
-      "agentId": 1,
-      "montantEngagement": 1000
-    }
-    ```
-
-- **Success Response**: `{ "success": true, "message": "Client created successfully", "data": { "client": { ... } } }`
-
-#### b. Deposit into a Client Account
-
-- **URL**: `POST /api/v1/clients/:id/deposit`
-- **Description**: Adds an amount to the client's `accountBalance` and records a "Depot" type transaction.
-- **Body (JSON)**:
-
-    ```json
-    {
-      "amount": 500
-    }
-    ```
-
-- **Success Response**: `{ "success": true, "message": "Deposit successful", "data": { "newBalance": 500 } }`
-
-#### c. Renew a Client Account
-
-- **URL**: `POST /api/v1/clients/:id/renew`
-- **Description**: Reactivates an account for 30 days, updates the client's commitment amount, and records a "FraisReactivation" transaction.
-- **Body (JSON)**:
-
-    ```json
-    {
-      "fraisReactivation": 1200
-    }
-    ```
-
-- **Success Response**: `{ "success": true, "message": "Account renewed successfully", "data": { "clientId": "..." } }`
-
-#### d. Payout a Client's Balance
-
-- **URL**: `POST /api/v1/clients/:id/payout`
-- **Description**: Empties the client's balance (`accountBalance` becomes 0), marks their account as "expired", and records a "Retrait" transaction.
-- **Body**: None
-- **Success Response**: `{ "success": true, "message": "Client account paid out successfully", "data": { "clientId": "...", "amountPaidOut": "..." } }`
+This project is open source under the MIT License.
