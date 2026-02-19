@@ -1,12 +1,12 @@
 import { Response } from "express";
-import { ApiResponse } from "../utils/response.handler";
+import { databaseService } from "../services/database";
 import logger from "../config/logger";
 import { AuthRequest } from "../types/express.d";
 import Client from "../models/Client";
 import Ticket from "../models/Ticket";
 import Transaction from "../models/Transaction";
-import { databaseService } from "../services/database";
 import { ClientDto } from "../types/client.types";
+import { ApiResponse } from "../utils/response.handler";
 
 export const createClient = async (req: AuthRequest, res: Response) => {
   const db = await databaseService.getDbConnection();
@@ -336,41 +336,6 @@ export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
     return ApiResponse.error(
       res,
       "Failed to process client account withdrawal",
-      null,
-      500,
-    );
-  }
-};
-
-export const getAccountingStats = async (req: AuthRequest, res: Response) => {
-  try {
-    const currentFiscalYear = await databaseService.getCurrentFiscalYear();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoFormatted = thirtyDaysAgo.toISOString().split("T")[0];
-
-    const db = await databaseService.getDbConnection();
-    const accountingTransactions = await Transaction.getAccounting(
-      db,
-      currentFiscalYear,
-      thirtyDaysAgoFormatted,
-    );
-    return ApiResponse.success(
-      res,
-      "Accounting stats retrieved successfully",
-      accountingTransactions,
-    );
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : "Unknown error";
-    const errorStack =
-      error instanceof Error ? error.stack : "No stack trace available";
-    logger.error("Error retrieving accounting stats:", {
-      message: errorMsg,
-      stack: errorStack,
-    });
-    return ApiResponse.error(
-      res,
-      "Failed to retrieve accounting stats",
       null,
       500,
     );

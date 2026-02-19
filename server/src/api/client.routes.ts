@@ -8,7 +8,6 @@ import {
   renewAccount,
   depositToAccount,
   payoutClientAccount,
-  getAccountingStats,
 } from "../controllers/client.controller";
 import { protect } from "../middleware/auth.middleware";
 import { checkAccountStatus } from "../middleware/checkAccountStatus";
@@ -29,7 +28,6 @@ router.use(protect);
 
 router.post("/", validate(createClientSchema), createClient);
 router.get("/", getAllClients);
-router.get("/accounting", getAccountingStats);
 
 // Routes with account status check and validation
 router.post(
