@@ -69,6 +69,7 @@ class DatabaseService {
     try {
       const conn = db || (await this.getDbConnection());
       if (!db) logger.info("Initializing database...");
+      await this.runMigrations(conn);
 
       // Use db.exec for CREATE TABLE statements
       await conn.exec(`
@@ -154,6 +155,79 @@ class DatabaseService {
       logger.error("Database initialization failed:", { error });
       throw error; // Re-throw the error to be caught by the caller
     }
+  }
+
+  private async runMigrations(conn: Database): Promise<void> {
+    const currentYear = new Date().getFullYear();
+    // ---- Admin
+    const adminCols = await conn.all<{ name: string }[]>(
+      `PRAGMA table_info(Admin)`,
+    );
+    const adminColNames = new Set(adminCols.map((c) => c.name));
+
+    if (!adminColNames.has("createdFiscalYear")) {
+      await conn.exec(
+        `ALTER TABLE Admin ADD COLUMN createdFiscalYear INTEGER NOT NULL DEFAULT ${currentYear}`,
+      );
+    }
+
+    // ---- Agent
+    const agentCols = await conn.all<{ name: string }[]>(
+      `PRAGMA table_info(Agent)`,
+    );
+    const agentColNames = new Set(agentCols.map((c) => c.name));
+
+    if (!agentColNames.has("createdFiscalYear")) {
+      await conn.exec(
+        `ALTER TABLE Agent ADD COLUMN createdFiscalYear INTEGER NOT NULL DEFAULT ${currentYear}`,
+      );
+    }
+
+    // ---- Client
+    const clientCols = await conn.all<{ name: string }[]>(
+      `PRAGMA table_info(Client)`,
+    );
+    const clientColNames = new Set(clientCols.map((c) => c.name));
+
+    if (!clientColNames.has("createdFiscalYear")) {
+      await conn.exec(
+        `ALTER TABLE Client ADD COLUMN createdFiscalYear INTEGER NOT NULL DEFAULT ${currentYear}`,
+      );
+    }
+
+    // ---- Ticket
+    const ticketCols = await conn.all<{ name: string }[]>(
+      `PRAGMA table_info(Ticket)`,
+    );
+    const ticketColNames = new Set(ticketCols.map((c) => c.name));
+
+    if (!ticketColNames.has("createdFiscalYear")) {
+      await conn.exec(
+        `ALTER TABLE Ticket ADD COLUMN createdFiscalYear INTEGER NOT NULL DEFAULT ${currentYear}`,
+      );
+    }
+
+    // ---- Transactions
+    const txCols = await conn.all<{ name: string }[]>(
+      `PRAGMA table_info(Transactions)`,
+    );
+    const txColNames = new Set(txCols.map((c) => c.name));
+
+    if (!txColNames.has("fiscalYear")) {
+      await conn.exec(
+        `ALTER TABLE Transactions ADD COLUMN fiscalYear INTEGER NOT NULL DEFAULT ${currentYear}`,
+      );
+    }
+
+    // ---- AppSettings table
+    await conn.exec(`
+    CREATE TABLE IF NOT EXISTS AppSettings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      fiscalYear INTEGER NOT NULL UNIQUE,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+    logger.info("Migration applied: added createdFiscalYear to Client");
   }
 
   async getCurrentFiscalYear(): Promise<number> {
