@@ -87,8 +87,9 @@ export default function ClientPage() {
         await payout(clientId, amount);
         break;
       case "renew":
-        if (amount === undefined)
+        if (amount === undefined) {
           throw new Error("Amount is required for renewal.");
+        }
         await renewAccount(clientId, amount);
         break;
     }
