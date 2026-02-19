@@ -18,6 +18,7 @@ export default function ClientPage() {
     deposit,
     payout,
     renewAccount,
+    expireAccount,
   } = useClients();
 
   const [isClientFormOpen, setIsClientFormOpen] = useState(false);
@@ -99,6 +100,14 @@ export default function ClientPage() {
       await updateClient(id, clientData);
     } else {
       await createClient(clientData);
+    }
+  };
+
+  const handleExpireClientAccount = async (id: number) => {
+    try {
+      await expireAccount(id);
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
@@ -215,6 +224,7 @@ export default function ClientPage() {
         onEdit={handleEditClientClick}
         onDelete={handleDeleteClient}
         onFinancialOp={handleFinancialOperationClick}
+        onExpire={handleExpireClientAccount}
       />
     </div>
   );

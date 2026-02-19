@@ -341,3 +341,54 @@ export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
     );
   }
 };
+
+export const expireClientAccount = async (req: AuthRequest, res: Response) => {
+  const db = await databaseService.getDbConnection();
+  try {
+    const clientId = parseInt(req.params.id, 10);
+
+    await db.run("BEGIN");
+
+    const client = await Client.findById(clientId, db);
+    if (!client) {
+      await db.run("ROLLBACK");
+      return ApiResponse.error(res, "Client not found", null, 404);
+    }
+
+    if (client.accountBalance !== 0) {
+      await db.run("ROLLBACK");
+      return ApiResponse.error(
+        res,
+        "Cannot expire account with a non-zero balance.",
+        null,
+        400,
+      );
+    }
+
+    await Client.update(clientId, { status: "expired" }, db);
+
+    await Transaction.create(
+      {
+        clientId: client.id,
+        amount: 0,
+        type: "Expiration",
+        description: `Account manually expired by admin.`,
+      },
+      db,
+    );
+
+    await db.run("COMMIT");
+
+    logger.info(`Client account ${clientId} expired successfully.`);
+    return ApiResponse.success(
+      res,
+      "Client account expired successfully",
+      null,
+      200,
+    );
+  } catch (error) {
+    await db.run("ROLLBACK");
+    logger.error("Error expiring client account:", { error });
+    return ApiResponse.error(res, "Failed to expire client account", null, 500);
+  }
+};

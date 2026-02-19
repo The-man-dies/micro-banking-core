@@ -8,6 +8,7 @@ import {
   renewAccount,
   depositToAccount,
   payoutClientAccount,
+  expireClientAccount,
 } from "../controllers/client.controller";
 import { protect } from "../middleware/auth.middleware";
 import { checkAccountStatus } from "../middleware/checkAccountStatus";
@@ -52,5 +53,7 @@ router.post(
 router.get("/:id", validate(clientIdSchema), getClientById);
 router.put("/:id", validate(updateClientSchema), updateClient);
 router.delete("/:id", validate(clientIdSchema), deleteClient);
+
+router.post("/:id/expire", validate(clientIdSchema), expireClientAccount);
 
 export default router;

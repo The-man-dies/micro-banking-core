@@ -131,7 +131,7 @@ class DatabaseService {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     clientId INTEGER NOT NULL,
                     amount REAL NOT NULL,
-                    type TEXT NOT NULL CHECK(type IN ('FraisInscription', 'FraisReactivation', 'Depot', 'Retrait')),
+                    type TEXT NOT NULL CHECK(type IN ('FraisInscription', 'FraisReactivation', 'Depot', 'Retrait', 'Expiration')),
                     description TEXT,
                     createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
                     fiscalYear INTEGER NOT NULL,
@@ -217,6 +217,48 @@ class DatabaseService {
       await conn.exec(
         `ALTER TABLE Transactions ADD COLUMN fiscalYear INTEGER NOT NULL DEFAULT ${currentYear}`,
       );
+    }
+
+    // Migration for Transactions type column to include 'Expiration'
+    const transactionsSchema = await conn.get<{ sql: string }>(
+      `SELECT sql FROM sqlite_master WHERE type='table' AND name='Transactions'`,
+    );
+
+    if (
+      transactionsSchema &&
+      transactionsSchema.sql &&
+      !transactionsSchema.sql.includes(
+        "CHECK(type IN ('FraisInscription', 'FraisReactivation', 'Depot', 'Retrait', 'Expiration'))",
+      )
+    ) {
+      logger.info("Migrating Transactions table to include 'Expiration' type.");
+
+      await conn.exec(`
+        ALTER TABLE Transactions RENAME TO _Transactions_old;
+      `);
+
+      await conn.exec(`
+        CREATE TABLE Transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          clientId INTEGER NOT NULL,
+          amount REAL NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('FraisInscription', 'FraisReactivation', 'Depot', 'Retrait', 'Expiration')),
+          description TEXT,
+          createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+          fiscalYear INTEGER NOT NULL,
+          FOREIGN KEY (clientId) REFERENCES Client(id)
+        );
+      `);
+
+      await conn.exec(`
+        INSERT INTO Transactions (id, clientId, amount, type, description, createdAt, fiscalYear)
+        SELECT id, clientId, amount, type, description, createdAt, fiscalYear FROM _Transactions_old;
+      `);
+
+      await conn.exec(`
+        DROP TABLE _Transactions_old;
+      `);
+      logger.info("Migration for Transactions table completed.");
     }
 
     // ---- AppSettings table
