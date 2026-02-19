@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 // CountdownDisplay Component (Helper for client expiration)
-const CountdownDisplay = ({ expiresAt, status }: { expiresAt: string, status: string }) => {
+const CountdownDisplay = ({ expiresAt, status }: { expiresAt: string, status: 'active' | 'expired' | 'withdraw_only' }) => {
     const countdown = useCountdown(expiresAt, status);
   return (
     <div className="bg-base-200/50 rounded-xl p-4 mb-6">
