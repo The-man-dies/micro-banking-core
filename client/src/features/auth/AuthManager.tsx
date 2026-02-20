@@ -77,20 +77,23 @@ const AuthManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     let refreshInterval: number;
 
     const checkTokenAndRefresh = async () => {
-      if (!isAuthenticated || !useAuthStore.getState().refreshToken) {
+      const { refreshToken, lastActivity: latestActivity } =
+        useAuthStore.getState();
+
+      if (!isAuthenticated || !refreshToken) {
         return; // No authenticated session or refresh token
       }
 
       const now = Date.now();
-      const isUserActive = now - lastActivity < INACTIVITY_THRESHOLD_MS;
+      const isUserActive = now - latestActivity < INACTIVITY_THRESHOLD_MS;
 
       // Get session status from backend
       try {
-        const authStatusResponse = await api<AuthStatusResponse>(
+        const authStatusResponse = await api<{ data: AuthStatusResponse }>(
           "/admin/status",
           { method: "GET" },
         );
-        const expiresAt = new Date(authStatusResponse.expiresAt).getTime();
+        const expiresAt = new Date(authStatusResponse.data.expiresAt).getTime();
         const expiresInMs = expiresAt - now;
 
         if (expiresInMs < TOKEN_REFRESH_WINDOW_MS && isUserActive) {
@@ -143,7 +146,7 @@ const AuthManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => {
       clearInterval(refreshInterval);
     };
-  }, [isAuthenticated, lastActivity, refreshSession, logout]);
+  }, [isAuthenticated, refreshSession, logout]);
 
   return <>{children}</>;
 };
