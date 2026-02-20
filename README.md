@@ -106,15 +106,11 @@ flowchart TD
 
 ```mermaid
 stateDiagram-v2
-
     [*] --> Active
-
-    Active --> WithdrawOnly : 30 days passed\nAND balance > 0
-    Active --> Expired : 30 days passed\nAND balance == 0
-
+    Active --> WithdrawOnly : 30 days passed AND balance > 0
+    Active --> Expired : 30 days passed AND balance == 0
     WithdrawOnly --> Expired : balance becomes 0
-
-    Expired --> Active : Renew account\n(set accountExpiresAt = now + 30 days)
+    Expired --> Active : Renew account (set accountExpiresAt = now + 30 days)
 ```
 
 ## 🛠 Technical Stack
@@ -142,10 +138,10 @@ rm -f package-lock.json pnpm-lock.yaml
 bun install
 
 # Run the backend server
-bun run server/src/app.ts
+cd client && bun dev
 
 # Run the frontend (if applicable)
-bun run client/src/main.tsx
+cd server && bun dev
 ```
 
 ---
