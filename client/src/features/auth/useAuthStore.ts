@@ -56,7 +56,7 @@ const useAuthStore = create<AuthState>()(
         try {
           const response = await api('/admin/refresh', {
             method: 'POST',
-            data: { refreshToken: currentRefreshToken },
+            data: { token: currentRefreshToken },
           });
 
           if (response.accessToken && response.refreshToken) {
