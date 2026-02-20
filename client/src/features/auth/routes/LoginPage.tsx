@@ -28,10 +28,13 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const response = await api<ApiEnvelope<LoginResponseData>>("/admin/login", {
-        method: "POST",
-        data: { username, password },
-      });
+      const response = await api<ApiEnvelope<LoginResponseData>>(
+        "/admin/login",
+        {
+          method: "POST",
+          data: { username, password },
+        },
+      );
 
       if (response.data?.accessToken && response.data?.refreshToken) {
         setAccessToken(response.data.accessToken); // Use store to set accessToken

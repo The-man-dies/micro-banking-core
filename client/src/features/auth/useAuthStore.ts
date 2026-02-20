@@ -31,7 +31,10 @@ interface AuthState {
   updateActivity: () => void;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
-  getSessionStatus: () => Promise<{ expiresAt: string; expiresIn: number } | null>;
+  getSessionStatus: () => Promise<{
+    expiresAt: string;
+    expiresIn: number;
+  } | null>;
 }
 
 const useAuthStore = create<AuthState>()(
@@ -120,7 +123,10 @@ const useAuthStore = create<AuthState>()(
             "/admin/status",
             { method: "GET", trackActivity: false },
           );
-          if (response.data?.expiresAt && typeof response.data.expiresIn === "number") {
+          if (
+            response.data?.expiresAt &&
+            typeof response.data.expiresIn === "number"
+          ) {
             return {
               expiresAt: response.data.expiresAt,
               expiresIn: response.data.expiresIn,
