@@ -59,12 +59,13 @@ const useAuthStore = create<AuthState>()(
             data: { token: currentRefreshToken },
           });
 
-          if (response.accessToken && response.refreshToken) {
+          if (response.data && response.data.accessToken) {
             set({
-              accessToken: response.accessToken,
-              refreshToken: response.refreshToken,
+              accessToken: response.data.accessToken,
+              // Keep the current refresh token if the backend doesn't provide a new one
+              refreshToken: response.data.refreshToken || currentRefreshToken,
               isAuthenticated: true,
-              lastActivity: Date.now(), // Refreshing token counts as activity
+              lastActivity: Date.now(),
             });
             return true;
           } else {
