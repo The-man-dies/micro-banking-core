@@ -57,30 +57,30 @@ export const useCountdown = (
   status: ClientAccountStatus,
 ): Countdown => {
   const [countdown, setCountdown] = useState<Countdown>(() =>
-    status === "expired"
-      ? EXPIRED_COUNTDOWN
-      : calculateTimeRemaining(expiresAt),
+    calculateTimeRemaining(expiresAt),
   );
 
-  // Keep countdown synced when status becomes expired
   useEffect(() => {
-    if (status === "expired") {
-      setCountdown(EXPIRED_COUNTDOWN);
-    }
-  }, [status]);
-
-  useEffect(() => {
-    // Only run timer if not expired
     if (status === "expired" || countdown.isExpired) {
       return;
     }
 
+    setCountdown(calculateTimeRemaining(expiresAt));
+
     const timer = setInterval(() => {
-      setCountdown(calculateTimeRemaining(expiresAt));
+      const timeLeft = calculateTimeRemaining(expiresAt);
+      setCountdown(timeLeft);
+
+      if (timeLeft.isExpired) {
+        clearInterval(timer);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
   }, [expiresAt, countdown.isExpired, status]);
+  if (status === "expired") {
+    return EXPIRED_COUNTDOWN;
+  }
 
   return countdown;
 };
