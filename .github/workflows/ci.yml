@@ -63,5 +63,5 @@ jobs:
       - name: Lint (Eslint)
         run: bun run eslint "src/**/*.ts" --max-warnings=0
 
-      - name: TypeScript Check
+      - name: Prettier Check
         run: bun run prettier --check "src/**/*.{ts,js,json.md}"
