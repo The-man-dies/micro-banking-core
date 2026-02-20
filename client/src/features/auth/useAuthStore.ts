@@ -86,7 +86,9 @@ const useAuthStore = create<AuthState>()(
         }
         try {
           const response = await api('/admin/status', { method: 'GET' });
-          if (response.status && response.expiresAt) {
+          if (response.data && response.data.status && response.data.expiresAt) {
+            return { status: response.data.status, expiresAt: response.data.expiresAt };
+          }
             return { status: response.status, expiresAt: response.expiresAt };
           }
           return null;
