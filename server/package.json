@@ -8,6 +8,7 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "test": "jest",
+    "eslint": "eslint 'src/**/*.ts'",
     "create-admin": "ts-node src/scripts/createAdmin.ts"
   },
   "keywords": [],
@@ -36,6 +37,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.2",
     "@types/sqlite3": "^3.1.11",
+    "eslint": "^10.0.0",
     "jest": "^30.2.0",
     "nodemon": "^3.1.11",
     "ts-jest": "^29.4.6",
