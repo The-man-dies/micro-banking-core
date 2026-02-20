@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import api from '../../services/api-client'; // Import the api-client
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import api from "../../services/api-client"; // Import the api-client
 
 interface AuthState {
   accessToken: string | null;
@@ -23,10 +23,10 @@ const useAuthStore = create<AuthState>()(
       lastActivity: Date.now(),
       isAuthenticated: false,
 
-      setAccessToken: (token) => {
+      setAccessToken: (token: string | null) => {
         set({ accessToken: token, isAuthenticated: !!token });
       },
-      setRefreshToken: (token) => {
+      setRefreshToken: (token: string | null) => {
         set({ refreshToken: token });
       },
       updateActivity: () => {
@@ -34,13 +34,21 @@ const useAuthStore = create<AuthState>()(
       },
       logout: async () => {
         const currentRefreshToken = get().refreshToken;
-        set({ accessToken: null, refreshToken: null, isAuthenticated: false, lastActivity: Date.now() });
+        set({
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          lastActivity: Date.now(),
+        });
         // Call backend logout endpoint
         if (currentRefreshToken) {
           try {
-            await api('/admin/logout', { method: 'POST', data: { token: currentRefreshToken } });
+            await api("/admin/logout", {
+              method: "POST",
+              data: { token: currentRefreshToken },
+            });
           } catch (error) {
-            console.error('Logout failed:', error);
+            console.error("Logout failed:", error);
             // Optionally, handle error, but still clear local state
           }
         }
@@ -54,8 +62,8 @@ const useAuthStore = create<AuthState>()(
         }
 
         try {
-          const response = await api('/admin/refresh', {
-            method: 'POST',
+          const response = await api("/admin/refresh", {
+            method: "POST",
             data: { token: currentRefreshToken },
           });
 
@@ -74,7 +82,7 @@ const useAuthStore = create<AuthState>()(
             return false;
           }
         } catch (error) {
-          console.error('Failed to refresh token:', error);
+          console.error("Failed to refresh token:", error);
           get().logout(); // Force logout on refresh failure
           return false;
         }
@@ -85,21 +93,26 @@ const useAuthStore = create<AuthState>()(
           return null;
         }
         try {
-          const response = await api('/admin/status', { method: 'GET' });
-          if (response.data && response.data.status && response.data.expiresAt) {
-            return { status: response.data.status, expiresAt: response.data.expiresAt };
-          }
-            return { status: response.status, expiresAt: response.expiresAt };
+          const response = await api("/admin/status", { method: "GET" });
+          if (
+            response.data &&
+            response.data.status &&
+            response.data.expiresAt
+          ) {
+            return {
+              status: response.data.status,
+              expiresAt: response.data.expiresAt,
+            };
           }
           return null;
         } catch (error) {
-          console.error('Failed to get session status:', error);
+          console.error("Failed to get session status:", error);
           return null;
         }
       },
     }),
     {
-      name: 'auth-storage', // name of the item in the storage (must be unique)
+      name: "auth-storage", // name of the item in the storage (must be unique)
       storage: createJSONStorage(() => sessionStorage), // use sessionStorage
       partialize: (state) => ({ refreshToken: state.refreshToken }), // ONLY persist refreshToken
     },
