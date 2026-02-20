@@ -135,7 +135,8 @@ rm -rf node_modules
 rm -f package-lock.json pnpm-lock.yaml
 
 # Install dependencies using Bun
-bun install
+cd client && bun install
+cd server && bun install
 
 # Run the backend server
 cd client && bun dev
