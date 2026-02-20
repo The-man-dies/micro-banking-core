@@ -56,7 +56,7 @@ class ClientModel implements IClientModel {
   public async findById<T = any>(
     id: string | number,
     db?: Database,
-  ): Promise<ClientType | null> {
+  ): Promise<ClientType | null | T> {
     const conn = await this.getConnection(db);
     const row = await conn.get<ClientType>(
       `SELECT * FROM Client WHERE id = ?`,

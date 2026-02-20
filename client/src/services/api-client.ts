@@ -52,16 +52,11 @@ export const api = async <T = any>(
   endpoint: string,
   options: AxiosRequestConfig = {},
 ): Promise<T> => {
-  try {
-    const response: AxiosResponse<T> = await axiosInstance({
-      url: endpoint,
-      ...options,
-    });
-    return response.data; // Return just the data
-  } catch (error: any) {
-    // Already handled by interceptor for 401
-    throw error;
-  }
+  const response: AxiosResponse<T> = await axiosInstance({
+    url: endpoint,
+    ...options,
+  });
+  return response.data; // Return just the data
 };
 
 export default axiosInstance;

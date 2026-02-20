@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import useAuthStore from './useAuthStore';
-import api from '../../services/api-client'; // Import the api-client
+import React, { useEffect, useRef } from "react";
+import useAuthStore from "./useAuthStore";
+import { api } from "../../services/api-client"; // Import the api-client
 
 const INACTIVITY_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
 const REFRESH_CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds
@@ -12,8 +12,44 @@ interface AuthStatusResponse {
 }
 
 const AuthManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, lastActivity, updateActivity, refreshSession, logout } = useAuthStore();
+  const {
+    isAuthenticated,
+    lastActivity,
+    updateActivity,
+    refreshSession,
+    logout,
+  } = useAuthStore();
   const activityTimerRef = useRef<number | undefined>(undefined);
+
+  // --- Auto-logout on inactivity ---
+  useEffect(() => {
+    // Only manage inactivity timer when authenticated
+    if (!isAuthenticated) {
+      if (activityTimerRef.current) {
+        clearTimeout(activityTimerRef.current);
+        activityTimerRef.current = undefined;
+      }
+      return;
+    }
+
+    // Reset any existing timer
+    if (activityTimerRef.current) {
+      clearTimeout(activityTimerRef.current);
+    }
+
+    // Schedule logout when inactivity threshold is reached
+    activityTimerRef.current = window.setTimeout(() => {
+      console.log("User inactive for too long — logging out.");
+      logout();
+      activityTimerRef.current = undefined;
+    }, INACTIVITY_THRESHOLD_MS) as unknown as number;
+
+    return () => {
+      if (activityTimerRef.current) {
+        clearTimeout(activityTimerRef.current);
+      }
+    };
+  }, [lastActivity, isAuthenticated, logout]);
 
   // --- User Activity Monitoring ---
   useEffect(() => {
@@ -22,17 +58,17 @@ const AuthManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     };
 
     // Listen to mouse, keyboard, and click events
-    document.addEventListener('mousemove', handleActivity);
-    document.addEventListener('keydown', handleActivity);
-    document.addEventListener('click', handleActivity);
+    document.addEventListener("mousemove", handleActivity);
+    document.addEventListener("keydown", handleActivity);
+    document.addEventListener("click", handleActivity);
 
     // Initial activity update
     updateActivity();
 
     return () => {
-      document.removeEventListener('mousemove', handleActivity);
-      document.removeEventListener('keydown', handleActivity);
-      document.removeEventListener('click', handleActivity);
+      document.removeEventListener("mousemove", handleActivity);
+      document.removeEventListener("keydown", handleActivity);
+      document.removeEventListener("click", handleActivity);
     };
   }, [updateActivity]);
 
@@ -46,38 +82,51 @@ const AuthManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       }
 
       const now = Date.now();
-      const isUserActive = (now - lastActivity) < INACTIVITY_THRESHOLD_MS;
+      const isUserActive = now - lastActivity < INACTIVITY_THRESHOLD_MS;
 
       // Get session status from backend
       try {
-        const authStatusResponse = await api<AuthStatusResponse>('/admin/status', { method: 'GET' });
+        const authStatusResponse = await api<AuthStatusResponse>(
+          "/admin/status",
+          { method: "GET" },
+        );
         const expiresAt = new Date(authStatusResponse.expiresAt).getTime();
         const expiresInMs = expiresAt - now;
 
         if (expiresInMs < TOKEN_REFRESH_WINDOW_MS && isUserActive) {
-          console.log('Access token near expiration and user is active. Attempting refresh...');
+          console.log(
+            "Access token near expiration and user is active. Attempting refresh...",
+          );
           const refreshed = await refreshSession();
           if (!refreshed) {
-            console.error('Failed to refresh session, logging out.');
+            console.error("Failed to refresh session, logging out.");
             logout();
           }
         } else if (expiresInMs <= 0 && isUserActive) {
           // Token expired while active, attempt refresh immediately
-          console.log('Access token expired and user is active. Attempting refresh...');
+          console.log(
+            "Access token expired and user is active. Attempting refresh...",
+          );
           const refreshed = await refreshSession();
           if (!refreshed) {
-            console.error('Failed to refresh session immediately after expiration, logging out.');
+            console.error(
+              "Failed to refresh session immediately after expiration, logging out.",
+            );
             logout();
           }
         } else if (expiresInMs <= 0 && !isUserActive) {
           // Token expired while inactive, allow natural logout (401 on next request)
-          console.log('Access token expired and user is inactive. Allowing natural expiration.');
+          console.log(
+            "Access token expired and user is inactive. Allowing natural expiration.",
+          );
         } else {
           // Token is valid and not near expiration, or user is inactive
-          console.log('Token is valid or user is inactive, no refresh needed yet.');
+          console.log(
+            "Token is valid or user is inactive, no refresh needed yet.",
+          );
         }
       } catch (error) {
-        console.error('Error checking token status:', error);
+        console.error("Error checking token status:", error);
         // If /admin/status fails, it might be due to an expired token, leading to 401
         // The api-client interceptor should handle 401 for this, resulting in logout.
       }
@@ -85,7 +134,10 @@ const AuthManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
     // Start periodic check only if authenticated
     if (isAuthenticated) {
-      refreshInterval = setInterval(checkTokenAndRefresh, REFRESH_CHECK_INTERVAL_MS) as unknown as number;
+      refreshInterval = setInterval(
+        checkTokenAndRefresh,
+        REFRESH_CHECK_INTERVAL_MS,
+      ) as unknown as number;
     }
 
     return () => {

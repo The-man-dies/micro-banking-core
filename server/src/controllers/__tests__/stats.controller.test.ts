@@ -1,7 +1,7 @@
-import { databaseService } from '../../services/database';
-import { getDashboardStats, getTimeSeriesStats } from '../stats.controller';
-import { Request, Response } from 'express';
-import { Database } from 'sqlite';
+import { databaseService } from "../../services/database";
+import { getDashboardStats, getTimeSeriesStats } from "../stats.controller";
+import { Request, Response } from "express";
+import { Database } from "sqlite";
 
 // Mock Express request and response
 const mockRequest = (): Partial<Request> => ({});
@@ -18,12 +18,12 @@ const mockResponse = (): Partial<Response> & {
 
 // Helper to get date strings
 const getTestDate = (daysAgo: number): string => {
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-    return date.toISOString();
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  return date.toISOString();
 };
 
-describe('Stats Controller', () => {
+describe("Stats Controller", () => {
   let db: Database;
 
   beforeAll(async () => {
@@ -31,8 +31,10 @@ describe('Stats Controller', () => {
     await databaseService.initializeDatabase(db);
 
     // Seed data for tests
-    await db.run("INSERT INTO Agent (id, firstname, lastname) VALUES (1, 'Test', 'Agent'), (2, 'Second', 'Agent')");
-    
+    await db.run(
+      "INSERT INTO Agent (id, firstname, lastname) VALUES (1, 'Test', 'Agent'), (2, 'Second', 'Agent')",
+    );
+
     await db.run(`
       INSERT INTO Client (id, firstname, lastname, agentId, accountBalance, montantEngagement, accountExpiresAt, status) VALUES
       (1, 'John', 'Doe', 1, 1000, 500, '${getTestDate(-30)}', 'active'),
@@ -57,12 +59,14 @@ describe('Stats Controller', () => {
     await db.close();
   });
 
-  describe('getDashboardStats', () => {
-    it('should return aggregated KPIs and financial stats', async () => {
+  describe("getDashboardStats", () => {
+    it("should return aggregated KPIs and financial stats", async () => {
       const req = mockRequest() as Request;
       const res = mockResponse() as Response;
 
-      const getDbConnectionSpy = jest.spyOn(databaseService, 'getDbConnection').mockResolvedValue(db);
+      const getDbConnectionSpy = jest
+        .spyOn(databaseService, "getDbConnection")
+        .mockResolvedValue(db);
       await getDashboardStats(req, res);
       getDbConnectionSpy.mockRestore();
 
@@ -79,45 +83,59 @@ describe('Stats Controller', () => {
             totalDeposits: 2000,
             totalPayouts: 500,
           },
-        })
+        }),
       );
     });
   });
 
-  describe('getTimeSeriesStats', () => {
-    it('should return continuous time series data with gaps filled', async () => {
-        const req = mockRequest() as Request;
-        const res = mockResponse() as Response;
+  describe("getTimeSeriesStats", () => {
+    it("should return continuous time series data with gaps filled", async () => {
+      const req = mockRequest() as Request;
+      const res = mockResponse() as Response;
 
-        const getDbConnectionSpy = jest.spyOn(databaseService, 'getDbConnection').mockResolvedValue(db);
-        await getTimeSeriesStats(req, res);
-        getDbConnectionSpy.mockRestore();
+      const getDbConnectionSpy = jest
+        .spyOn(databaseService, "getDbConnection")
+        .mockResolvedValue(db);
+      await getTimeSeriesStats(req, res);
+      getDbConnectionSpy.mockRestore();
 
-        expect(res.status).toHaveBeenCalledWith(200);
-        const { data } = (res.json as jest.Mock).mock.calls[0][0];
+      expect(res.status).toHaveBeenCalledWith(200);
+      const { data } = (res.json as jest.Mock).mock.calls[0][0];
 
-        // Should have 4 days of data (day -3, -2, -1, 0)
-        expect(data.revenue.length).toBe(4);
-        expect(data.deposits.length).toBe(4);
-        expect(data.newClients.length).toBe(4);
+      // Should have 4 days of data (day -3, -2, -1, 0)
+      expect(data.revenue.length).toBe(4);
+      expect(data.deposits.length).toBe(4);
+      expect(data.newClients.length).toBe(4);
 
-        // Check values for 3 days ago
-        const threeDaysAgo = getTestDate(3).split('T')[0];
-        expect(data.revenue.find((d: any) => d.date === threeDaysAgo).value).toBe(1500); // 500 + 1000
-        expect(data.deposits.find((d: any) => d.date === threeDaysAgo).value).toBe(500);
-        expect(data.newClients.find((d: any) => d.date === threeDaysAgo).value).toBe(2);
+      // Check values for 3 days ago
+      const threeDaysAgo = getTestDate(3).split("T")[0];
+      expect(data.revenue.find((d: any) => d.date === threeDaysAgo).value).toBe(
+        1500,
+      ); // 500 + 1000
+      expect(
+        data.deposits.find((d: any) => d.date === threeDaysAgo).value,
+      ).toBe(500);
+      expect(
+        data.newClients.find((d: any) => d.date === threeDaysAgo).value,
+      ).toBe(2);
 
-        // Check values for "gap" day (2 days ago)
-        const twoDaysAgo = getTestDate(2).split('T')[0];
-        expect(data.revenue.find((d: any) => d.date === twoDaysAgo).value).toBe(0);
-        expect(data.deposits.find((d: any) => d.date === twoDaysAgo).value).toBe(0);
-        expect(data.newClients.find((d: any) => d.date === twoDaysAgo).value).toBe(0);
+      // Check values for "gap" day (2 days ago)
+      const twoDaysAgo = getTestDate(2).split("T")[0];
+      expect(data.revenue.find((d: any) => d.date === twoDaysAgo).value).toBe(
+        0,
+      );
+      expect(data.deposits.find((d: any) => d.date === twoDaysAgo).value).toBe(
+        0,
+      );
+      expect(
+        data.newClients.find((d: any) => d.date === twoDaysAgo).value,
+      ).toBe(0);
 
-        // Check values for today
-        const today = getTestDate(0).split('T')[0];
-        expect(data.revenue.find((d: any) => d.date === today).value).toBe(1000);
-        expect(data.deposits.find((d: any) => d.date === today).value).toBe(1500); // 500 + 1000
-        expect(data.newClients.find((d: any) => d.date === today).value).toBe(0);
+      // Check values for today
+      const today = getTestDate(0).split("T")[0];
+      expect(data.revenue.find((d: any) => d.date === today).value).toBe(1000);
+      expect(data.deposits.find((d: any) => d.date === today).value).toBe(1500); // 500 + 1000
+      expect(data.newClients.find((d: any) => d.date === today).value).toBe(0);
     });
   });
 });
