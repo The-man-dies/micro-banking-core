@@ -38,7 +38,7 @@ const useAuthStore = create<AuthState>()(
         // Call backend logout endpoint
         if (currentRefreshToken) {
           try {
-            await api('/admin/logout', { method: 'POST', data: { refreshToken: currentRefreshToken } });
+            await api('/admin/logout', { method: 'POST', data: { token: currentRefreshToken } });
           } catch (error) {
             console.error('Logout failed:', error);
             // Optionally, handle error, but still clear local state
