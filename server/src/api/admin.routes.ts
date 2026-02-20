@@ -1,7 +1,12 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { login, refreshToken, logout, status } from '../controllers/admin.controller';
-import { protect } from '../middleware/auth.middleware';
-import { AuthRequest } from '../types/express.d';
+import { Router, Response } from "express";
+import {
+  login,
+  refreshToken,
+  logout,
+  status,
+} from "../controllers/admin.controller";
+import { protect } from "../middleware/auth.middleware";
+import { AuthRequest } from "../types/express.d";
 
 const router = Router();
 
@@ -15,7 +20,7 @@ const router = Router();
  * @response 401 { "success": false, "message": "Invalid credentials" }
  * @response 500 { "success": false, "message": "Server error" }
  */
-router.post('/login', login);
+router.post("/login", login);
 
 /**
  * @route   POST /api/v1/admin/refresh
@@ -27,7 +32,7 @@ router.post('/login', login);
  * @response 403 { "success": false, "message": "Invalid refresh token" }
  * @response 500 { "success": false, "message": "Server error" }
  */
-router.post('/refresh', refreshToken);
+router.post("/refresh", refreshToken);
 
 /**
  * @route   POST /api/v1/admin/logout
@@ -38,7 +43,7 @@ router.post('/refresh', refreshToken);
  * @response 400 { "success": false, "message": "Refresh token is required" }
  * @response 500 { "success": false, "message": "Server error" }
  */
-router.post('/logout', logout);
+router.post("/logout", logout);
 
 /**
  * @route   GET /api/v1/admin/status
@@ -48,7 +53,9 @@ router.post('/logout', logout);
  * @response 200 { "success": true, "message": "Token is valid", "data": { "user": { "id": 1, "username": "admin" }, "expiresAt": "2025-12-24T12:00:00.000Z", "expiresIn": 899 } }
  * @response 401 { "success": false, "message": "Token is not valid" }
  */
-router.get('/status', protect, (req: AuthRequest, res: Response) => status(req, res));
+router.get("/status", protect, (req: AuthRequest, res: Response) =>
+  status(req, res),
+);
 
 /**
  * @route   GET /api/v1/admin/profile
@@ -59,8 +66,8 @@ router.get('/status', protect, (req: AuthRequest, res: Response) => status(req, 
  * @response 401 { "success": false, "message": "No token, authorization denied" }
  * @response 401 { "success": false, "message": "Token is not valid" }
  */
-router.get('/profile', protect, (req: AuthRequest, res: Response) => {
-    res.json(req.admin);
+router.get("/profile", protect, (req: AuthRequest, res: Response) => {
+  res.json(req.admin);
 });
 
 export default router;

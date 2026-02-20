@@ -29,7 +29,6 @@ class Agent implements AgentModel {
     } catch (error) {
       logger.error("Error creating agent:", { error });
       throw error;
-    } finally {
     }
   }
 
@@ -52,7 +51,6 @@ class Agent implements AgentModel {
     } catch (error) {
       logger.error("Error finding agent:", { error });
       throw error;
-    } finally {
     }
   }
 
@@ -80,7 +78,6 @@ class Agent implements AgentModel {
     } catch (error) {
       logger.error("Error updating agent:", { error });
       throw error;
-    } finally {
     }
   }
   public async delete(id: string): Promise<boolean> {
@@ -94,7 +91,6 @@ class Agent implements AgentModel {
     } catch (error) {
       logger.error("Error deleting agent:", { error });
       throw error;
-    } finally {
     }
   }
 }

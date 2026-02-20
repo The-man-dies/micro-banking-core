@@ -5,8 +5,12 @@ import { defineConfig } from "eslint/config";
 
 export default defineConfig(
   { ignores: ["dist", "node_modules", "micro_banking.db"] },
+
+  js.configs.recommended,
+
+  ...tseslint.configs.recommended,
+
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.ts"],
     languageOptions: {
       ecmaVersion: 2020,
