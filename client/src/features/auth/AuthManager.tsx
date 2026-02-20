@@ -93,9 +93,7 @@ const AuthManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           "/admin/status",
           { method: "GET" },
         );
-        const expiresAt = new Date(
-          authStatusResponse.data.expiresAt,
-        ).getTime();
+        const expiresAt = new Date(authStatusResponse.data.expiresAt).getTime();
         const expiresInMs = expiresAt - now;
 
         if (expiresInMs < TOKEN_REFRESH_WINDOW_MS && isUserActive) {
