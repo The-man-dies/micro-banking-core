@@ -1,6 +1,25 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import api from "../../services/api-client"; // Import the api-client
+import { api } from "../../services/api-client"; // Import the api-client
+
+interface ApiEnvelope<T> {
+  success: boolean;
+  message: string;
+  data?: T;
+}
+
+interface RefreshResponseData {
+  accessToken: string;
+}
+
+interface SessionStatusData {
+  user: {
+    id: number;
+    username: string;
+  };
+  expiresAt: string;
+  expiresIn: number;
+}
 
 interface AuthState {
   accessToken: string | null;
@@ -12,7 +31,7 @@ interface AuthState {
   updateActivity: () => void;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
-  getSessionStatus: () => Promise<{ expiresAt: string; status: string } | null>;
+  getSessionStatus: () => Promise<{ expiresAt: string; expiresIn: number } | null>;
 }
 
 const useAuthStore = create<AuthState>()(
@@ -62,16 +81,20 @@ const useAuthStore = create<AuthState>()(
         }
 
         try {
-          const response = await api("/admin/refresh", {
-            method: "POST",
-            data: { token: currentRefreshToken },
-          });
+          const response = await api<ApiEnvelope<RefreshResponseData>>(
+            "/admin/refresh",
+            {
+              method: "POST",
+              data: { token: currentRefreshToken },
+              trackActivity: false,
+            },
+          );
 
-          if (response.data && response.data.accessToken) {
+          if (response.data?.accessToken) {
             set({
               accessToken: response.data.accessToken,
-              // Keep the current refresh token if the backend doesn't provide a new one
-              refreshToken: response.data.refreshToken || currentRefreshToken,
+              // Backend refresh returns only accessToken, so keep existing refreshToken.
+              refreshToken: currentRefreshToken,
               isAuthenticated: true,
               lastActivity: Date.now(),
             });
@@ -93,15 +116,14 @@ const useAuthStore = create<AuthState>()(
           return null;
         }
         try {
-          const response = await api("/admin/status", { method: "GET" });
-          if (
-            response.data &&
-            response.data.status &&
-            response.data.expiresAt
-          ) {
+          const response = await api<ApiEnvelope<SessionStatusData>>(
+            "/admin/status",
+            { method: "GET", trackActivity: false },
+          );
+          if (response.data?.expiresAt && typeof response.data.expiresIn === "number") {
             return {
-              status: response.data.status,
               expiresAt: response.data.expiresAt,
+              expiresIn: response.data.expiresIn,
             };
           }
           return null;

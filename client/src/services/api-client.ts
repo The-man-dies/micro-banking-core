@@ -2,6 +2,12 @@ import axios from "axios";
 import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import useAuthStore from "../features/auth/useAuthStore"; // Import the auth store
 
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    trackActivity?: boolean;
+  }
+}
+
 // Create an axios instance
 const axiosInstance = axios.create({
   baseURL: "http://localhost:3001/api/v1",
@@ -24,8 +30,10 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
   (response) => {
-    // On any successful API call, update last activity timestamp
-    useAuthStore.getState().updateActivity();
+    // Activity tracking can be disabled for background/maintenance requests.
+    if (response.config.trackActivity !== false) {
+      useAuthStore.getState().updateActivity();
+    }
     return response;
   },
   (error) => {
