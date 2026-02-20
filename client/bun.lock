@@ -10,6 +10,7 @@
         "charjs": "^0.0.1-security",
         "daisyui": "^5.5.14",
         "lucide-react": "^0.561.0",
+        "pettier": "^1.1.0",
         "react": "^19.2.0",
         "react-chartjs-2": "^5.3.1",
         "react-dom": "^19.2.0",
@@ -588,6 +589,8 @@
     "path-exists": ["path-exists@4.0.0", "", {}, ""],
 
     "path-key": ["path-key@3.1.1", "", {}, ""],
+
+    "pettier": ["pettier@1.1.0", "", {}, "sha512-TBb5x9nd7u4piP1S0k/OvNeyNtTDavwWrlutpJIM1IUAqwf5d25Qhd7A5oRqooUKcRhptPKzC3E3nJRYfE3V9Q=="],
 
     "picocolors": ["picocolors@1.1.1", "", {}, ""],
 

@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  client:
+    name: Bun Client Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Bun
+        uses: oven-sh/bun@v1
+        with:
+          bun-version: stable
+
+      - name: Install client dependencies
+        run: |
+          cd client
+          bun install
+
+      - name: Run Eslint
+        run: |
+          cd client
+          bun run eslint "src/**/*.{ts,tsx}" --max-warnings=0
+
+      - name: TypeScript Check
+        run: |
+          cd client
+          bun run tsc --noEmit
+
+      - name: Prettier Check
+        run: |
+          cd client
+          bun run pettrier --check "src/**/*.{ts,tsx,js,json,css,md}"
+
+      - name: Build Client
+        run: |
+          cd client
+          bun run build
+  server:
+    name: Bun Server Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Bun
+        uses: oven-sh/bun@v1
+        with:
+          bun-version: stable
+
+      - name: Install server dependencies
+        run: |
+          cd server
+          bun install
+
+      - name: Run Eslint
+        run: |
+          cd server
+          bun run eslint "src/**/*.ts" --max-warnings=0
+
+      - name: TypeScript Check
+        run: |
+          cd server
+          bun run prettier --check "src/**/*.{ts,js,json.md}"
