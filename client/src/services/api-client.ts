@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { AxiosRequestConfig, AxiosResponse } from "axios";
+import useAuthStore from "../features/auth/useAuthStore"; // Import the auth store
 
 // Create an axios instance
 const axiosInstance = axios.create({
@@ -12,9 +13,9 @@ const axiosInstance = axios.create({
 // Add request interceptor to attach token
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      config.headers["x-auth-token"] = token;
+    const accessToken = useAuthStore.getState().accessToken; // Get accessToken from store
+    if (accessToken) {
+      config.headers["x-auth-token"] = accessToken;
     }
     return config;
   },
@@ -22,15 +23,27 @@ axiosInstance.interceptors.request.use(
 );
 
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // On any successful API call, update last activity timestamp
+    useAuthStore.getState().updateActivity();
+    return response;
+  },
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Clear tokens and redirect to login on unauthorized response
-      localStorage.removeItem("accessToken");
+      // If 401, immediately logout via the auth store
+      useAuthStore.getState().logout();
       return Promise.reject({
         message: "Session expired. Please log in again.",
       });
     }
+
+    // Default error handling for other errors
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      "An unexpected error occurred.";
+    const status = error.response?.status || 500;
+    throw { message, status };
   },
 );
 
@@ -46,17 +59,8 @@ export const api = async <T = any>(
     });
     return response.data; // Return just the data
   } catch (error: any) {
-    // Extract meaningful message
-    const message =
-      error.response?.data?.message ||
-      error.message ||
-      "An unexpected error occurred.";
-
-    // Optionally attach status code
-    const status = error.response?.status || 500;
-
-    // Throw a structured error object for UI handling
-    throw { message, status };
+    // Already handled by interceptor for 401
+    throw error;
   }
 };
 
