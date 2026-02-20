@@ -103,7 +103,10 @@ export const useClients = () => {
   const renewAccount = useCallback(
     async (clientId: number, fraisReactivation: number) => {
       try {
-        await api(`/clients/${clientId}/renew`, { method: "POST", data: { fraisReactivation } });
+        await api(`/clients/${clientId}/renew`, {
+          method: "POST",
+          data: { fraisReactivation },
+        });
         fetchClients(); // Refresh the list to reflect new status/renewal date
       } catch (err: any) {
         throw new Error(err.message || "Failed to renew account.");

@@ -1,6 +1,6 @@
-import { Router } from 'express';
-import { getAllTransactions } from '../controllers/transaction.controller';
-import { protect } from '../middleware/auth.middleware';
+import { Router } from "express";
+import { getAllTransactions } from "../controllers/transaction.controller";
+import { protect } from "../middleware/auth.middleware";
 
 const router = Router();
 
@@ -9,6 +9,6 @@ const router = Router();
  * @desc    Get all transactions
  * @access  Private
  */
-router.get('/', protect, getAllTransactions);
+router.get("/", protect, getAllTransactions);
 
 export default router;

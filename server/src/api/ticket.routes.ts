@@ -1,6 +1,12 @@
-import { Router } from 'express';
-import { createTicket, getTicketById, updateTicket, deleteTicket, getAllTickets } from '../controllers/ticket.controller';
-import { protect } from '../middleware/auth.middleware';
+import { Router } from "express";
+import {
+  createTicket,
+  getTicketById,
+  updateTicket,
+  deleteTicket,
+  getAllTickets,
+} from "../controllers/ticket.controller";
+import { protect } from "../middleware/auth.middleware";
 
 const router = Router();
 
@@ -12,34 +18,34 @@ router.use(protect);
  * @desc    Create a new ticket
  * @access  Private (Admin only)
  */
-router.post('/', createTicket);
+router.post("/", createTicket);
 
 /**
  * @route   GET /api/v1/tickets
  * @desc    Get all tickets
  * @access  Private (Admin only)
  */
-router.get('/', getAllTickets);
+router.get("/", getAllTickets);
 
 /**
  * @route   GET /api/v1/tickets/:id
  * @desc    Get ticket by ID
  * @access  Private (Admin only)
  */
-router.get('/:id', getTicketById);
+router.get("/:id", getTicketById);
 
 /**
  * @route   PUT /api/v1/tickets/:id
  * @desc    Update a ticket by ID
  * @access  Private (Admin only)
  */
-router.put('/:id', updateTicket);
+router.put("/:id", updateTicket);
 
 /**
  * @route   DELETE /api/v1/tickets/:id
  * @desc    Delete a ticket by ID
  * @access  Private (Admin only)
  */
-router.delete('/:id', deleteTicket);
+router.delete("/:id", deleteTicket);
 
 export default router;

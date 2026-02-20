@@ -14,8 +14,7 @@ export const useComptabilite = () => {
       setAccountingData(response.data.data);
     } catch (err: any) {
       setError(
-        err.message ||
-          "Erreur lors de la récupération des données comptables.",
+        err.message || "Erreur lors de la récupération des données comptables.",
       );
       console.error(err);
     } finally {

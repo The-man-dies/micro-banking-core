@@ -1,8 +1,8 @@
-import { Request } from 'express';
-import { JwtAdminPayload } from './admin.types';
-import { ClientType } from '../models/Client';
+import { Request } from "express";
+import { JwtAdminPayload } from "./admin.types";
+import { ClientType } from "../models/Client";
 
-declare module 'express' {
+declare module "express" {
   export interface Request {
     admin?: JwtAdminPayload;
     client?: ClientType;

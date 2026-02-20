@@ -8,4 +8,4 @@ export type AgentType = {
   location?: string;
 };
 
-export type AgentDto = Omit<AgentType, 'id'>;
+export type AgentDto = Omit<AgentType, "id">;
