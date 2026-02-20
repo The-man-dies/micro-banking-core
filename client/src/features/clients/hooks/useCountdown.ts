@@ -65,7 +65,10 @@ export const useCountdown = (
       return;
     }
 
-    setCountdown(calculateTimeRemaining(expiresAt));
+    // Update state asynchronously to avoid synchronous setState inside effect
+    const init = setTimeout(() => {
+      setCountdown(calculateTimeRemaining(expiresAt));
+    }, 0);
 
     const timer = setInterval(() => {
       const timeLeft = calculateTimeRemaining(expiresAt);
@@ -76,7 +79,10 @@ export const useCountdown = (
       }
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(init);
+    };
   }, [expiresAt, countdown.isExpired, status]);
   if (status === "expired") {
     return EXPIRED_COUNTDOWN;
