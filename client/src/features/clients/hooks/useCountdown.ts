@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { type ClientAccountStatus } from "../types";
 
 interface Countdown {
   days: number;
@@ -51,19 +52,26 @@ const calculateTimeRemaining = (expiresAt: string): Countdown => {
   };
 };
 
-export const useCountdown = (expiresAt: string, status: string): Countdown => {
+export const useCountdown = (
+  expiresAt: string,
+  status: ClientAccountStatus,
+): Countdown => {
   const [countdown, setCountdown] = useState<Countdown>(() =>
-    calculateTimeRemaining(expiresAt),
+    status === "expired"
+      ? EXPIRED_COUNTDOWN
+      : calculateTimeRemaining(expiresAt),
   );
 
-  // If the account is expired, immediately return the expired state
-  if (status === "expired") {
-    return EXPIRED_COUNTDOWN;
-  }
+  // Keep countdown synced when status becomes expired
+  useEffect(() => {
+    if (status === "expired") {
+      setCountdown(EXPIRED_COUNTDOWN);
+    }
+  }, [status]);
 
   useEffect(() => {
     // Only run timer if not expired
-    if (countdown.isExpired) {
+    if (status === "expired" || countdown.isExpired) {
       return;
     }
 
@@ -72,7 +80,7 @@ export const useCountdown = (expiresAt: string, status: string): Countdown => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [expiresAt, countdown.isExpired, status]); // Added status to dependency array
+  }, [expiresAt, countdown.isExpired, status]);
 
   return countdown;
 };

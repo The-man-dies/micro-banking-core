@@ -9,5 +9,7 @@ export type Client = {
   montantEngagement: number;
   accountBalance: number;
   accountExpiresAt: string; // ISO 8601 format
-  status: 'active' | 'expired';
+  status: ClientAccountStatus;
 };
+
+export type ClientAccountStatus = "active" | "expired" | "withdraw_only";
