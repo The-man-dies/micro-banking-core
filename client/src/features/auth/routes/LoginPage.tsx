@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../services/api-client";
+import useAuthStore from "../useAuthStore"; // Import useAuthStore
 
 const LoginPage = () => {
     const [username, setUsername] = useState("admin");
@@ -8,6 +9,7 @@ const LoginPage = () => {
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+    const { setAccessToken, setRefreshToken } = useAuthStore(); // Destructure actions from the store
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -21,9 +23,8 @@ const LoginPage = () => {
             });
 
             if (response.data.data && response.data.data.accessToken && response.data.data.refreshToken) {
-                localStorage.setItem("accessToken", response.data.data.accessToken);
-                localStorage.setItem("refreshToken", response.data.data.refreshToken);
-                localStorage.setItem("isAuthenticated", "true"); // For compatibility with existing components
+                setAccessToken(response.data.data.accessToken); // Use store to set accessToken
+                setRefreshToken(response.data.data.refreshToken); // Use store to set refreshToken
                 navigate("/dashboard");
             } else {
                 setError("Réponse de connexion invalide.");
