@@ -1,14 +1,19 @@
 import React, { useEffect, useRef } from "react";
 import useAuthStore from "./useAuthStore";
 import { api } from "../../services/api-client"; // Import the api-client
+import type { ApiEnvelope } from "../../types/api";
 
 const INACTIVITY_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
 const REFRESH_CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds
 const TOKEN_REFRESH_WINDOW_MS = 5 * 60 * 1000; // Refresh if token expires in next 5 minutes
 
 interface AuthStatusResponse {
-  status: string; // e.g., 'valid', 'expired'
-  expiresAt: string; // ISO string
+  user: {
+    id: number;
+    username: string;
+  };
+  expiresAt: string;
+  expiresIn: number;
 }
 
 const AuthManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -89,9 +94,9 @@ const AuthManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       // Get session status from backend
       try {
-        const authStatusResponse = await api<{ data: AuthStatusResponse }>(
+        const authStatusResponse = await api<ApiEnvelope<AuthStatusResponse>>(
           "/admin/status",
-          { method: "GET" },
+          { method: "GET", trackActivity: false },
         );
         const expiresAt = new Date(authStatusResponse.data.expiresAt).getTime();
         const expiresInMs = expiresAt - now;

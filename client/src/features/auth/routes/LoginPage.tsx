@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../../services/api-client";
+import { api } from "../../../services/api-client";
+import type { ApiEnvelope } from "../../../types/api";
 import useAuthStore from "../useAuthStore"; // Import useAuthStore
+
+interface LoginResponseData {
+  accessToken: string;
+  refreshToken: string;
+}
 
 const LoginPage = () => {
   const [username, setUsername] = useState("admin");
@@ -17,18 +23,17 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const response = await api("/admin/login", {
-        method: "POST",
-        data: { username, password },
-      });
+      const response = await api<ApiEnvelope<LoginResponseData>>(
+        "/admin/login",
+        {
+          method: "POST",
+          data: { username, password },
+        },
+      );
 
-      if (
-        response.data.data &&
-        response.data.data.accessToken &&
-        response.data.data.refreshToken
-      ) {
-        setAccessToken(response.data.data.accessToken); // Use store to set accessToken
-        setRefreshToken(response.data.data.refreshToken); // Use store to set refreshToken
+      if (response.data?.accessToken && response.data?.refreshToken) {
+        setAccessToken(response.data.accessToken); // Use store to set accessToken
+        setRefreshToken(response.data.refreshToken); // Use store to set refreshToken
         navigate("/dashboard");
       } else {
         setError("Réponse de connexion invalide.");
