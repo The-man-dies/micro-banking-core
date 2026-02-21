@@ -16,7 +16,7 @@ const formatUnixTimestamp = (value?: number) => {
 const AdminProfilePage = () => {
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, _setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
