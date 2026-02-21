@@ -26,7 +26,9 @@ const AdminProfilePage = () => {
         });
         setProfile(response);
       } catch (err: any) {
-        setError(err?.message || "Impossible de charger le profil administrateur.");
+        setError(
+          err?.message || "Impossible de charger le profil administrateur.",
+        );
       } finally {
         setIsLoading(false);
       }
@@ -43,7 +45,9 @@ const AdminProfilePage = () => {
 
       <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
         {isLoading && (
-          <p className="text-gray-300">Chargement du profil administrateur...</p>
+          <p className="text-gray-300">
+            Chargement du profil administrateur...
+          </p>
         )}
 
         {!isLoading && error && (
