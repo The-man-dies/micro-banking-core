@@ -1,5 +1,6 @@
-import type { Database } from "sqlite";
+import { Prisma } from "@prisma/client";
 import logger from "../config/logger";
+import globalPrisma from "../services/prisma";
 import type {
   TransactionDto,
   TransactionType,
@@ -7,81 +8,112 @@ import type {
 import { databaseService } from "../services/database";
 
 export interface ITransactionModel {
-  create(transaction: TransactionDto, db: Database): Promise<TransactionType>;
-  getAll(db: Database, fiscalYear: number): Promise<TransactionType[]>;
+  create(
+    transaction: TransactionDto,
+    tx?: Prisma.TransactionClient,
+  ): Promise<TransactionType>;
+  getAll(
+    fiscalYear: number,
+    tx?: Prisma.TransactionClient,
+  ): Promise<(TransactionType & { agentId: number })[]>;
   getAccounting(
-    db: Database,
     fiscalYear: number,
     thirtyDaysAgoFormatted: string,
-  ): Promise<TransactionType[]>;
+    tx?: Prisma.TransactionClient,
+  ): Promise<(TransactionType & { agentId: number })[]>;
 }
 
 class TransactionModel implements ITransactionModel {
+  private getClient(tx?: Prisma.TransactionClient) {
+    return tx || globalPrisma;
+  }
+
   public async create(
     transaction: TransactionDto,
-    db: Database,
+    tx?: Prisma.TransactionClient,
   ): Promise<TransactionType> {
     try {
+      const db = this.getClient(tx);
       const currentFiscalYear = await databaseService.getCurrentFiscalYear();
-      const result = await db.run(
-        `INSERT INTO Transactions (clientId, amount, type, description, fiscalYear) VALUES (?, ?, ?, ?, ?)`,
-        transaction.clientId,
-        transaction.amount,
-        transaction.type,
-        transaction.description,
-        currentFiscalYear,
-      );
 
-      // SQLite does not return the created object, so we find it by lastID
-      const createdTransaction = await db.get<TransactionType>(
-        `SELECT * FROM Transactions WHERE id = ?`,
-        result.lastID,
-      );
+      const result = await db.transaction.create({
+        data: {
+          clientId: transaction.clientId,
+          amount: transaction.amount,
+          type: transaction.type,
+          description: transaction.description || null,
+          fiscalYear: currentFiscalYear,
+        },
+      });
 
-      if (!createdTransaction) {
-        throw new Error("Failed to retrieve created transaction.");
-      }
-
-      return createdTransaction;
+      return result as unknown as TransactionType;
     } catch (error) {
-      logger.error("Error creating transaction:", { error });
+      logger.error("Error creating transaction with Prisma:", { error });
       throw error;
     }
   }
 
   public async getAll(
-    db: Database,
     fiscalYear: number,
+    tx?: Prisma.TransactionClient,
   ): Promise<(TransactionType & { agentId: number })[]> {
     try {
-      const transactions = await db.all<
-        (TransactionType & { agentId: number })[]
-      >(
-        `SELECT t.*, c.agentId FROM Transactions AS t JOIN Client AS c ON t.clientId = c.id WHERE t.fiscalYear = ? ORDER BY t.createdAt DESC`,
-        [fiscalYear],
-      );
-      return transactions;
+      const db = this.getClient(tx);
+      const transactions = await db.transaction.findMany({
+        where: { fiscalYear },
+        include: {
+          client: {
+            select: { agentId: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return transactions.map((t) => ({
+        ...t,
+        createdAt: t.createdAt.toISOString(),
+        agentId: t.client.agentId,
+      })) as unknown as (TransactionType & { agentId: number })[];
     } catch (error) {
-      logger.error("Error fetching all transactions:", { error });
+      logger.error("Error fetching all transactions with Prisma:", { error });
       throw error;
     }
   }
 
   public async getAccounting(
-    db: Database,
     fiscalYear: number,
     thirtyDaysAgoFormatted: string,
+    tx?: Prisma.TransactionClient,
   ): Promise<(TransactionType & { agentId: number })[]> {
     try {
-      const transactions = await db.all<
-        (TransactionType & { agentId: number })[]
-      >(
-        `SELECT t.*, c.agentId FROM Transactions AS t JOIN Client AS c ON t.clientId = c.id WHERE t.fiscalYear = ? AND strftime('%Y-%m-%d', t.createdAt) >= ? ORDER BY t.createdAt DESC`,
-        [fiscalYear, thirtyDaysAgoFormatted],
-      );
-      return transactions;
+      const db = this.getClient(tx);
+      // Prisma doesn't have a direct strftime, but we can use GTE with Date object
+      const startDate = new Date(thirtyDaysAgoFormatted);
+
+      const transactions = await db.transaction.findMany({
+        where: {
+          fiscalYear,
+          createdAt: {
+            gte: startDate,
+          },
+        },
+        include: {
+          client: {
+            select: { agentId: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return transactions.map((t) => ({
+        ...t,
+        createdAt: t.createdAt.toISOString(),
+        agentId: t.client.agentId,
+      })) as unknown as (TransactionType & { agentId: number })[];
     } catch (error) {
-      logger.error("Error fetching accounting transactions:", { error });
+      logger.error("Error fetching accounting transactions with Prisma:", {
+        error,
+      });
       throw error;
     }
   }

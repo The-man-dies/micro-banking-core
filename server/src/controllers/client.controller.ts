@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { databaseService } from "../services/database";
+import prisma from "../services/prisma";
 import logger from "../config/logger";
 import { AuthRequest } from "../types/express.d";
 import Client from "../models/Client";
@@ -9,180 +9,171 @@ import { ClientDto } from "../types/client.types";
 import { ApiResponse } from "../utils/response.handler";
 
 export const createClient = async (req: AuthRequest, res: Response) => {
-  const db = await databaseService.getDbConnection();
   try {
     const { montantEngagement, ...clientData } = req.body as ClientDto;
 
-    await db.run("BEGIN");
+    const result = await prisma.$transaction(async (tx) => {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
 
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
+      const newClient = await Client.create(
+        {
+          ...clientData,
+          accountBalance: 0,
+          montantEngagement: montantEngagement,
+          accountExpiresAt: expiresAt.toISOString(),
+          status: "active",
+        },
+        tx as any,
+      );
 
-    const newClient = await Client.create(
-      {
-        ...clientData,
-        accountBalance: 0,
-        montantEngagement: montantEngagement,
-        accountExpiresAt: expiresAt.toISOString(),
-        status: "active",
-      },
-      db,
-    );
+      await Transaction.create(
+        {
+          clientId: newClient.id as unknown as number,
+          amount: montantEngagement,
+          type: "FraisInscription",
+          description: `Frais d'inscription initiaux.`,
+        },
+        tx as any,
+      );
 
-    await Transaction.create(
-      {
-        clientId: newClient.id,
-        amount: montantEngagement,
-        type: "FraisInscription",
-        description: `Frais d'inscription initiaux.`,
-      },
-      db,
-    );
+      await Ticket.create(
+        {
+          description: `Ticket initial pour le client ${newClient.id}`,
+          status: "active",
+          clientId: newClient.id as unknown as number,
+        },
+        tx as any,
+      );
 
-    await Ticket.create(
-      {
-        description: `Ticket initial pour le client ${newClient.id}`,
-        status: "active",
-        clientId: newClient.id,
-      },
-      db,
-    );
-
-    await db.run("COMMIT");
+      return newClient;
+    });
 
     logger.info("Client, transaction, and ticket created successfully", {
-      clientId: newClient.id,
+      clientId: result.id,
     });
     return ApiResponse.success(
       res,
       "Client created successfully",
-      { client: newClient },
+      { client: result },
       201,
     );
   } catch (error) {
-    await db.run("ROLLBACK");
     logger.error("Error creating client:", { error });
     return ApiResponse.error(res, "Failed to create client", null, 500);
   }
 };
 
 export const depositToAccount = async (req: AuthRequest, res: Response) => {
-  const db = await databaseService.getDbConnection();
   try {
     const clientId = parseInt(req.params.id, 10);
     const { amount } = req.body;
 
-    await db.run("BEGIN");
+    const result = await prisma.$transaction(async (tx) => {
+      const client = await Client.findById(clientId, tx as any);
+      if (!client) {
+        throw new Error("Client not found");
+      }
 
-    const client = await Client.findById(clientId, db);
-    if (!client) {
-      await db.run("ROLLBACK");
-      return ApiResponse.error(res, "Client not found", null, 404);
-    }
+      if (client.status === "expired") {
+        throw new Error(
+          "Cannot deposit to an expired account. Please renew first.",
+        );
+      }
 
-    if (client.status === "expired") {
-      await db.run("ROLLBACK");
-      return ApiResponse.error(
-        res,
-        "Cannot deposit to an expired account. Please renew first.",
-        null,
-        403,
+      if (amount !== client.montantEngagement) {
+        throw new Error(
+          `Le montant du dépôt (${amount} F) doit être égal au montant d'engagement du client (${client.montantEngagement} F).`,
+        );
+      }
+
+      const newBalance = client.accountBalance + amount;
+      await Client.update(clientId, { accountBalance: newBalance }, tx as any);
+
+      await Transaction.create(
+        {
+          clientId: client.id as unknown as number,
+          amount: amount,
+          type: "Depot",
+          description: `Dépôt sur le compte.`,
+        },
+        tx as any,
       );
-    }
 
-    // New business rule: deposit amount must match montantEngagement
-    if (amount !== client.montantEngagement) {
-      await db.run("ROLLBACK");
-      return ApiResponse.error(
-        res,
-        `Le montant du dépôt (${amount} F) doit être égal au montant d'engagement du client (${client.montantEngagement} F).`,
-        null,
-        400,
-      );
-    }
-
-    const newBalance = client.accountBalance + amount;
-    await Client.update(clientId, { accountBalance: newBalance }, db);
-
-    await Transaction.create(
-      {
-        clientId: client.id,
-        amount: amount,
-        type: "Depot",
-        description: `Dépôt sur le compte.`,
-      },
-      db,
-    );
-
-    await db.run("COMMIT");
+      return { newBalance };
+    });
 
     logger.info(
-      `Deposited ${amount} to client account ${clientId}. New balance: ${newBalance}`,
+      `Deposited ${amount} to client account ${clientId}. New balance: ${result.newBalance}`,
     );
-    return ApiResponse.success(res, "Deposit successful", { newBalance });
-  } catch (error) {
-    await db.run("ROLLBACK");
+    return ApiResponse.success(res, "Deposit successful", result);
+  } catch (error: any) {
     logger.error("Error depositing to client account:", { error });
-    return ApiResponse.error(res, "Failed to make deposit", null, 500);
+    const message = error.message || "Failed to make deposit";
+    const status = message.includes("not found")
+      ? 404
+      : message.includes("expired")
+        ? 403
+        : message.includes("montant")
+          ? 400
+          : 500;
+    return ApiResponse.error(res, message, null, status);
   }
 };
 
 export const renewAccount = async (req: AuthRequest, res: Response) => {
-  const db = await databaseService.getDbConnection();
   try {
     const clientId = parseInt(req.params.id, 10);
     const { fraisReactivation } = req.body;
 
-    await db.run("BEGIN");
+    await prisma.$transaction(async (tx) => {
+      const client = await Client.findById(clientId, tx as any);
+      if (!client) {
+        throw new Error("Client not found");
+      }
 
-    const client = await Client.findById(clientId, db);
-    if (!client) {
-      await db.run("ROLLBACK");
-      return ApiResponse.error(res, "Client not found", null, 404);
-    }
+      const newExpiresAt = new Date();
+      newExpiresAt.setDate(newExpiresAt.getDate() + 30);
 
-    const newExpiresAt = new Date();
-    newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+      await Client.update(
+        clientId,
+        {
+          montantEngagement: fraisReactivation,
+          accountExpiresAt: newExpiresAt.toISOString(),
+          status: "active",
+        },
+        tx as any,
+      );
 
-    await Client.update(
-      clientId,
-      {
-        montantEngagement: fraisReactivation,
-        accountExpiresAt: newExpiresAt.toISOString(),
-        status: "active",
-      },
-      db,
-    );
+      await Transaction.create(
+        {
+          clientId: client.id as unknown as number,
+          amount: fraisReactivation,
+          type: "FraisReactivation",
+          description: `Frais de réactivation du compte.`,
+        },
+        tx as any,
+      );
 
-    await Transaction.create(
-      {
-        clientId: client.id,
-        amount: fraisReactivation,
-        type: "FraisReactivation",
-        description: `Frais de réactivation du compte.`,
-      },
-      db,
-    );
-
-    await Ticket.create(
-      {
-        description: `Ticket de renouvellement pour le client ${client.id}`,
-        status: "active",
-        clientId: client.id,
-      },
-      db,
-    );
-
-    await db.run("COMMIT");
+      await Ticket.create(
+        {
+          description: `Ticket de renouvellement pour le client ${client.id}`,
+          status: "active",
+          clientId: client.id as unknown as number,
+        },
+        tx as any,
+      );
+    });
 
     logger.info(`Client account ${clientId} renewed successfully.`);
     return ApiResponse.success(res, "Account renewed successfully", {
       clientId: clientId,
     });
-  } catch (error) {
-    await db.run("ROLLBACK");
+  } catch (error: any) {
     logger.error("Error renewing client account:", { error });
-    return ApiResponse.error(res, "Failed to renew account", null, 500);
+    const message = error.message || "Failed to renew account";
+    const status = message.includes("not found") ? 404 : 500;
+    return ApiResponse.error(res, message, null, status);
   }
 };
 
@@ -202,8 +193,7 @@ export const getClientById = async (req: AuthRequest, res: Response) => {
 
 export const getAllClients = async (req: AuthRequest, res: Response) => {
   try {
-    const db = await databaseService.getDbConnection();
-    const clients = await db.all("SELECT * FROM Client");
+    const clients = await prisma.client.findMany();
     return ApiResponse.success(res, "Clients retrieved successfully", clients);
   } catch (error) {
     logger.error("Error retrieving clients:", { error });
@@ -245,139 +235,107 @@ export const deleteClient = async (req: AuthRequest, res: Response) => {
 };
 
 export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
-  const db = await databaseService.getDbConnection();
   try {
     const clientId = parseInt(req.params.id, 10);
-    const { amount: withdrawalAmount } = req.body; // Expect withdrawal amount from body
+    const { amount: withdrawalAmount } = req.body;
 
-    await db.run("BEGIN");
+    const result = await prisma.$transaction(async (tx) => {
+      const client = await Client.findById(clientId, tx as any);
+      if (!client) {
+        throw new Error("Client not found");
+      }
 
-    const client = await Client.findById(clientId, db);
-    if (!client) {
-      await db.run("ROLLBACK");
-      return ApiResponse.error(res, "Client not found", null, 404);
-    }
+      if (withdrawalAmount <= 0) {
+        throw new Error("Le montant du retrait doit être supérieur à zéro.");
+      }
 
-    // --- Strict Backend Validation Rules ---
-    // 1. withdrawalAmount must be strictly greater than 0
-    if (withdrawalAmount <= 0) {
-      await db.run("ROLLBACK");
-      return ApiResponse.error(
-        res,
-        "Le montant du retrait doit être supérieur à zéro.",
-        null,
-        400,
+      if (client.accountBalance === 0) {
+        throw new Error(
+          "Impossible de retirer. Le solde du compte est de zéro.",
+        );
+      }
+
+      if (withdrawalAmount > client.accountBalance) {
+        throw new Error(
+          "Le montant du retrait ne peut pas être supérieur au solde disponible.",
+        );
+      }
+
+      const newBalance = client.accountBalance - withdrawalAmount;
+      let newStatus = client.status;
+      const now = new Date();
+      const expiresAt = new Date(client.accountExpiresAt);
+
+      if (newBalance === 0 && now > expiresAt) {
+        newStatus = "expired";
+      }
+
+      await Client.update(
+        clientId,
+        { accountBalance: newBalance, status: newStatus },
+        tx as any,
       );
-    }
 
-    // 2. If availableBalance == 0, the request must be rejected
-    if (client.accountBalance === 0) {
-      await db.run("ROLLBACK");
-      return ApiResponse.error(
-        res,
-        "Impossible de retirer. Le solde du compte est de zéro.",
-        null,
-        400,
+      await Transaction.create(
+        {
+          clientId: client.id as unknown as number,
+          amount: withdrawalAmount,
+          type: "Retrait",
+          description: `Retrait du compte.`,
+        },
+        tx as any,
       );
-    }
 
-    // 3. withdrawalAmount must be strictly less than or equal to the available account balance
-    // 4. If withdrawalAmount > availableBalance, the request must be rejected
-    if (withdrawalAmount > client.accountBalance) {
-      await db.run("ROLLBACK");
-      return ApiResponse.error(
-        res,
-        "Le montant du retrait ne peut pas être supérieur au solde disponible.",
-        null,
-        400,
-      );
-    }
-
-    const newBalance = client.accountBalance - withdrawalAmount;
-
-    let newStatus = client.status;
-    const now = new Date();
-    const expiresAt = new Date(client.accountExpiresAt);
-
-    // Transition to 'expired' only if new balance is 0 AND account is past its expiration
-    if (newBalance === 0 && now > expiresAt) {
-      newStatus = "expired";
-    }
-
-    await Client.update(
-      clientId,
-      { accountBalance: newBalance, status: newStatus },
-      db,
-    );
-
-    await Transaction.create(
-      {
-        clientId: client.id,
-        amount: withdrawalAmount, // Use the actual withdrawal amount
-        type: "Retrait",
-        description: `Retrait du compte.`,
-      },
-      db,
-    );
-
-    await db.run("COMMIT");
+      return { newBalance, withdrawalAmount };
+    });
 
     logger.info(
-      `Client account ${clientId} withdrawn successfully. Amount: ${withdrawalAmount}. New balance: ${newBalance}`,
+      `Client account ${clientId} withdrawn successfully. Amount: ${result.withdrawalAmount}. New balance: ${result.newBalance}`,
     );
     return ApiResponse.success(res, "Client account withdrawn successfully", {
       clientId,
-      amountWithdrawn: withdrawalAmount,
-      newBalance,
+      amountWithdrawn: result.withdrawalAmount,
+      newBalance: result.newBalance,
     });
-  } catch (error) {
-    await db.run("ROLLBACK");
+  } catch (error: any) {
     logger.error("Error processing client account withdrawal:", { error });
-    return ApiResponse.error(
-      res,
-      "Failed to process client account withdrawal",
-      null,
-      500,
-    );
+    const message =
+      error.message || "Failed to process client account withdrawal";
+    const status = message.includes("not found")
+      ? 404
+      : message.includes("supérieur") || message.includes("zéro")
+        ? 400
+        : 500;
+    return ApiResponse.error(res, message, null, status);
   }
 };
 
 export const expireClientAccount = async (req: AuthRequest, res: Response) => {
-  const db = await databaseService.getDbConnection();
   try {
     const clientId = parseInt(req.params.id, 10);
 
-    await db.run("BEGIN");
+    await prisma.$transaction(async (tx) => {
+      const client = await Client.findById(clientId, tx as any);
+      if (!client) {
+        throw new Error("Client not found");
+      }
 
-    const client = await Client.findById(clientId, db);
-    if (!client) {
-      await db.run("ROLLBACK");
-      return ApiResponse.error(res, "Client not found", null, 404);
-    }
+      if (client.accountBalance !== 0) {
+        throw new Error("Cannot expire account with a non-zero balance.");
+      }
 
-    if (client.accountBalance !== 0) {
-      await db.run("ROLLBACK");
-      return ApiResponse.error(
-        res,
-        "Cannot expire account with a non-zero balance.",
-        null,
-        400,
+      await Client.update(clientId, { status: "expired" }, tx as any);
+
+      await Transaction.create(
+        {
+          clientId: client.id as unknown as number,
+          amount: 0,
+          type: "Expiration",
+          description: `Account manually expired by admin.`,
+        },
+        tx as any,
       );
-    }
-
-    await Client.update(clientId, { status: "expired" }, db);
-
-    await Transaction.create(
-      {
-        clientId: client.id,
-        amount: 0,
-        type: "Expiration",
-        description: `Account manually expired by admin.`,
-      },
-      db,
-    );
-
-    await db.run("COMMIT");
+    });
 
     logger.info(`Client account ${clientId} expired successfully.`);
     return ApiResponse.success(
@@ -386,9 +344,10 @@ export const expireClientAccount = async (req: AuthRequest, res: Response) => {
       null,
       200,
     );
-  } catch (error) {
-    await db.run("ROLLBACK");
+  } catch (error: any) {
     logger.error("Error expiring client account:", { error });
-    return ApiResponse.error(res, "Failed to expire client account", null, 500);
+    const message = error.message || "Failed to expire client account";
+    const status = message.includes("not found") ? 404 : 400;
+    return ApiResponse.error(res, message, null, status);
   }
 };

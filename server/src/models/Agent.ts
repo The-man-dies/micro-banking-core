@@ -1,4 +1,5 @@
 import logger from "../config/logger";
+import prisma from "../services/prisma";
 import { databaseService } from "../services/database";
 import { AgentType, AgentDto } from "../types/agent.types";
 
@@ -11,20 +12,22 @@ export interface AgentModel {
 
 class Agent implements AgentModel {
   public async create(agent: AgentDto): Promise<AgentType> {
-    const dbConnection = await databaseService.getDbConnection();
-    const currentFiscalYear = await databaseService.getCurrentFiscalYear();
     try {
-      const result = await dbConnection.run(
-        `INSERT INTO Agent (firstname, lastname, email, location, createdFiscalYear) VALUES (?, ?, ?, ?, ?)`,
-        agent.firstname,
-        agent.lastname,
-        agent.email || null,
-        agent.location || null,
-        currentFiscalYear,
-      );
+      const currentFiscalYear = await databaseService.getCurrentFiscalYear();
+      const result = await prisma.agent.create({
+        data: {
+          firstname: agent.firstname,
+          lastname: agent.lastname,
+          email: agent.email || null,
+          location: agent.location || null,
+          createdFiscalYear: currentFiscalYear,
+        },
+      });
       return {
-        id: result.lastID?.toString() || "",
-        ...agent,
+        ...result,
+        id: result.id.toString(),
+        email: result.email ?? undefined,
+        location: result.location ?? undefined,
       };
     } catch (error) {
       logger.error("Error creating agent:", { error });
@@ -33,20 +36,20 @@ class Agent implements AgentModel {
   }
 
   public async findById(id: string): Promise<AgentType | null> {
-    const dbConnection = await databaseService.getDbConnection();
-
     try {
-      const row = await dbConnection.get(
-        `SELECT * FROM Agent WHERE id = ?`,
-        id,
-      );
+      const agentId = parseInt(id, 10);
+      if (isNaN(agentId)) return null;
+
+      const row = await prisma.agent.findUnique({
+        where: { id: agentId },
+      });
+
       if (!row) return null;
       return {
+        ...row,
         id: row.id.toString(),
-        firstname: row.firstname,
-        lastname: row.lastname,
-        email: row.email || null,
-        location: row.location || null,
+        email: row.email ?? undefined,
+        location: row.location ?? undefined,
       };
     } catch (error) {
       logger.error("Error finding agent:", { error });
@@ -58,39 +61,44 @@ class Agent implements AgentModel {
     id: string,
     agent: Partial<AgentType>,
   ): Promise<AgentType | null> {
-    const dbConnection = await databaseService.getDbConnection();
     try {
-      const existingAgent = await this.findById(id);
-      if (!existingAgent) return null;
-      const updatedAgent = {
-        ...existingAgent,
-        ...agent,
+      const agentId = parseInt(id, 10);
+      if (isNaN(agentId)) return null;
+
+      const result = await prisma.agent.update({
+        where: { id: agentId },
+        data: {
+          firstname: agent.firstname,
+          lastname: agent.lastname,
+          email: agent.email,
+          location: agent.location,
+        },
+      });
+
+      return {
+        ...result,
+        id: result.id.toString(),
+        email: result.email ?? undefined,
+        location: result.location ?? undefined,
       };
-      await dbConnection.run(
-        `UPDATE Agent SET firstname = ?, lastname = ?, email = ?, location = ? WHERE id = ?`,
-        updatedAgent.firstname,
-        updatedAgent.lastname,
-        updatedAgent.email || null,
-        updatedAgent.location || null,
-        id,
-      );
-      return updatedAgent;
     } catch (error) {
       logger.error("Error updating agent:", { error });
       throw error;
     }
   }
+
   public async delete(id: string): Promise<boolean> {
-    const dbConnection = await databaseService.getDbConnection();
     try {
-      const result = await dbConnection.run(
-        `DELETE FROM Agent WHERE id = ?`,
-        id,
-      );
-      return result.changes !== undefined && result.changes > 0;
+      const agentId = parseInt(id, 10);
+      if (isNaN(agentId)) return false;
+
+      await prisma.agent.delete({
+        where: { id: agentId },
+      });
+      return true;
     } catch (error) {
       logger.error("Error deleting agent:", { error });
-      throw error;
+      return false;
     }
   }
 }

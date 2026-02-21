@@ -9,9 +9,10 @@ export interface JwtAdminPayload extends JwtPayload {
 export interface AdminType {
   id: number;
   username: string;
-  password: string;
+  password?: string;
   refreshToken?: string | null;
-  createdAt?: string;
+  createdAt: Date;
+  createdFiscalYear: number;
 }
 
 // DTO for creating a new admin

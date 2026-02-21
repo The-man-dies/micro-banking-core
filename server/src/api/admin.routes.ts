@@ -4,11 +4,27 @@ import {
   refreshToken,
   logout,
   status,
+  checkSetupStatus,
+  setupAdmin,
 } from "../controllers/admin.controller";
 import { protect } from "../middleware/auth.middleware";
 import { AuthRequest } from "../types/express.d";
 
 const router = Router();
+
+/**
+ * @route   GET /api/v1/admin/setup-status
+ * @desc    Check if the system has been initialized
+ * @access  Public
+ */
+router.get("/setup-status", checkSetupStatus);
+
+/**
+ * @route   POST /api/v1/admin/setup
+ * @desc    Create the first administrator
+ * @access  Public (blocked if an admin already exists)
+ */
+router.post("/setup", setupAdmin);
 
 /**
  * @route   POST /api/v1/admin/login
