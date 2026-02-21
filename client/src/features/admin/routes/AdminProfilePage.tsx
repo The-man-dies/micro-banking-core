@@ -25,6 +25,12 @@ const AdminProfilePage = () => {
           method: "GET",
         });
         setProfile(response);
+      } catch (error) {
+        setIsLoading(false);
+        setError(
+          `Erreur lors du chargement du profil administrateur ${(error as Error).message}`,
+        );
+        console.error(error);
       } finally {
         setIsLoading(false);
       }
