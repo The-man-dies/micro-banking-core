@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import useAuthStore from "./useAuthStore";
 import { api } from "../../services/api-client"; // Import the api-client
+import type { ApiEnvelope } from "../../types/api";
 
 const INACTIVITY_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
 const REFRESH_CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds
@@ -13,12 +14,6 @@ interface AuthStatusResponse {
   };
   expiresAt: string;
   expiresIn: number;
-}
-
-interface ApiEnvelope<T> {
-  success: boolean;
-  message: string;
-  data: T;
 }
 
 const AuthManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {

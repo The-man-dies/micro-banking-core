@@ -1,17 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../../services/api-client";
+import type { ApiEnvelope } from "../../../types/api";
 import useAuthStore from "../useAuthStore"; // Import useAuthStore
 
 interface LoginResponseData {
   accessToken: string;
   refreshToken: string;
-}
-
-interface ApiEnvelope<T> {
-  success: boolean;
-  message: string;
-  data?: T;
 }
 
 const LoginPage = () => {

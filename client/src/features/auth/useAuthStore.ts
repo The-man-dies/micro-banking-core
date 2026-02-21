@@ -1,12 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../services/api-client"; // Import the api-client
-
-interface ApiEnvelope<T> {
-  success: boolean;
-  message: string;
-  data?: T;
-}
+import type { ApiEnvelope } from "../../types/api";
 
 interface RefreshResponseData {
   accessToken: string;
@@ -99,7 +94,6 @@ const useAuthStore = create<AuthState>()(
               // Backend refresh returns only accessToken, so keep existing refreshToken.
               refreshToken: currentRefreshToken,
               isAuthenticated: true,
-              lastActivity: Date.now(),
             });
             return true;
           } else {
