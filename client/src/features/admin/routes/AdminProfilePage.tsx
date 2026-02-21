@@ -25,10 +25,6 @@ const AdminProfilePage = () => {
           method: "GET",
         });
         setProfile(response);
-      } catch (err: any) {
-        setError(
-          err?.message || "Impossible de charger le profil administrateur.",
-        );
       } finally {
         setIsLoading(false);
       }
