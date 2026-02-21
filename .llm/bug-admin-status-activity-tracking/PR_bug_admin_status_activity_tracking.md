@@ -30,12 +30,16 @@ Observed backend response contract:
   - Switched to the shared `api` wrapper import.
   - Aligned `/admin/refresh` and `/admin/status` handling to backend envelope/data shape.
   - Marked `/admin/refresh` and `/admin/status` calls as `trackActivity: false`.
+  - Removed `lastActivity` mutation from `refreshSession` so background refresh does not extend user activity.
 - `client/src/features/auth/routes/LoginPage.tsx`
   - Switched to the shared `api` wrapper import.
   - Aligned login response parsing to backend envelope/data shape.
+- `client/src/types/api.ts`
+  - Added shared `ApiEnvelope<T>` and replaced duplicated local definitions.
 
 ## Commit
 - `e694a58` (`fix(auth): align auth API contract and ignore background activity`)
+- `50c1c6f` (`fix(auth): avoid refresh activity bump and centralize api envelope type`)
 
 ## How to Test
 1. Log in and stay idle (no mouse/keyboard/click activity).
