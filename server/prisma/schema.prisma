@@ -7,6 +7,14 @@ datasource db {
   provider = "sqlite"
 }
 
+enum TransactionType {
+  FraisInscription
+  FraisReactivation
+  Depot
+  Retrait
+  Expiration
+}
+
 model Admin {
   id                Int      @id @default(autoincrement())
   username          String   @unique
@@ -23,6 +31,7 @@ model Agent {
   email             String?  @unique
   location          String?
   createdFiscalYear Int
+  createdAt         DateTime @default(now())
   clients           Client[]
 }
 
@@ -37,9 +46,10 @@ model Client {
   agent             Agent         @relation(fields: [agentId], references: [id])
   accountBalance    Float         @default(0)
   montantEngagement Float         @default(0)
-  accountExpiresAt  String
+  accountExpiresAt  DateTime
   status            String        @default("active")
   createdFiscalYear Int
+  createdAt         DateTime      @default(now())
   tickets           Ticket[]
   transactions      Transaction[]
 }
@@ -51,18 +61,18 @@ model Ticket {
   clientId          Int
   client            Client   @relation(fields: [clientId], references: [id])
   createdFiscalYear Int
+  createdAt         DateTime @default(now())
 }
 
 model Transaction {
-  id          Int      @id @default(autoincrement())
+  id          Int             @id @default(autoincrement())
   clientId    Int
-  client      Client   @relation(fields: [clientId], references: [id])
+  client      Client          @relation(fields: [clientId], references: [id])
   amount      Float
-  type        String   // FraisInscription, FraisReactivation, Depot, Retrait, Expiration
+  type        TransactionType
   description String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime        @default(now())
   fiscalYear  Int
-
 }
 
 model AppSettings {

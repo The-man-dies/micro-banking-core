@@ -1,5 +1,6 @@
 import prisma from "../services/prisma";
 import logger from "../config/logger";
+import { TransactionType } from "../types/transaction.types";
 
 type TimeSeriesPoint = { date: string; value: number };
 type RawTimeSeriesPoint = { date: string; value: number };
@@ -111,21 +112,26 @@ class StatsModel implements IStatsModel {
           prisma.client.aggregate({ _sum: { accountBalance: true } }),
           prisma.transaction.aggregate({
             where: {
-              type: { in: ["FraisInscription", "FraisReactivation"] },
+              type: {
+                in: [
+                  TransactionType.FraisInscription,
+                  TransactionType.FraisReactivation,
+                ],
+              },
               fiscalYear: currentFiscalYear,
             },
             _sum: { amount: true },
           }),
           prisma.transaction.aggregate({
             where: {
-              type: "Depot",
+              type: TransactionType.Depot,
               fiscalYear: currentFiscalYear,
             },
             _sum: { amount: true },
           }),
           prisma.transaction.aggregate({
             where: {
-              type: "Retrait",
+              type: TransactionType.Retrait,
               fiscalYear: currentFiscalYear,
             },
             _sum: { amount: true },
@@ -178,7 +184,7 @@ class StatsModel implements IStatsModel {
       });
 
       const aggregateByDate = (
-        types: string[],
+        types: TransactionType[],
         sum: boolean = true,
       ): RawTimeSeriesPoint[] => {
         const filtered = transactions.filter((t: any) =>
@@ -201,11 +207,14 @@ class StatsModel implements IStatsModel {
       };
 
       const revenueData = aggregateByDate([
-        "FraisInscription",
-        "FraisReactivation",
+        TransactionType.FraisInscription,
+        TransactionType.FraisReactivation,
       ]);
-      const depositsData = aggregateByDate(["Depot"]);
-      const newClientsData = aggregateByDate(["FraisInscription"], false);
+      const depositsData = aggregateByDate([TransactionType.Depot]);
+      const newClientsData = aggregateByDate(
+        [TransactionType.FraisInscription],
+        false,
+      );
 
       const transactionHistoryGrouped = transactions.reduce(
         (acc: Record<string, number>, t: any) => {

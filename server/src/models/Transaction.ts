@@ -3,6 +3,7 @@ import logger from "../config/logger";
 import globalPrisma from "../services/prisma";
 import type {
   TransactionDto,
+  TransactionData,
   TransactionType,
 } from "../types/transaction.types";
 import { databaseService } from "../services/database";
@@ -11,16 +12,16 @@ export interface ITransactionModel {
   create(
     transaction: TransactionDto,
     tx?: Prisma.TransactionClient,
-  ): Promise<TransactionType>;
+  ): Promise<TransactionData>;
   getAll(
     fiscalYear: number,
     tx?: Prisma.TransactionClient,
-  ): Promise<(TransactionType & { agentId: number })[]>;
+  ): Promise<(TransactionData & { agentId: number })[]>;
   getAccounting(
     fiscalYear: number,
     thirtyDaysAgoFormatted: string,
     tx?: Prisma.TransactionClient,
-  ): Promise<(TransactionType & { agentId: number })[]>;
+  ): Promise<(TransactionData & { agentId: number })[]>;
 }
 
 class TransactionModel implements ITransactionModel {
@@ -31,7 +32,7 @@ class TransactionModel implements ITransactionModel {
   public async create(
     transaction: TransactionDto,
     tx?: Prisma.TransactionClient,
-  ): Promise<TransactionType> {
+  ): Promise<TransactionData> {
     try {
       const db = this.getClient(tx);
       const currentFiscalYear = await databaseService.getCurrentFiscalYear();
@@ -46,7 +47,14 @@ class TransactionModel implements ITransactionModel {
         },
       });
 
-      return result as unknown as TransactionType;
+      return {
+        id: result.id.toString(),
+        clientId: result.clientId,
+        amount: result.amount,
+        type: result.type.toString() as TransactionType,
+        description: result.description ?? undefined,
+        createdAt: result.createdAt.toISOString(),
+      };
     } catch (error) {
       logger.error("Error creating transaction with Prisma:", { error });
       throw error;
@@ -56,7 +64,7 @@ class TransactionModel implements ITransactionModel {
   public async getAll(
     fiscalYear: number,
     tx?: Prisma.TransactionClient,
-  ): Promise<(TransactionType & { agentId: number })[]> {
+  ): Promise<(TransactionData & { agentId: number })[]> {
     try {
       const db = this.getClient(tx);
       const transactions = await db.transaction.findMany({
@@ -70,10 +78,14 @@ class TransactionModel implements ITransactionModel {
       });
 
       return transactions.map((t) => ({
-        ...t,
+        id: t.id.toString(),
+        clientId: t.clientId,
+        amount: t.amount,
+        type: t.type.toString() as TransactionType,
+        description: t.description ?? undefined,
         createdAt: t.createdAt.toISOString(),
         agentId: t.client.agentId,
-      })) as unknown as (TransactionType & { agentId: number })[];
+      }));
     } catch (error) {
       logger.error("Error fetching all transactions with Prisma:", { error });
       throw error;
@@ -84,10 +96,9 @@ class TransactionModel implements ITransactionModel {
     fiscalYear: number,
     thirtyDaysAgoFormatted: string,
     tx?: Prisma.TransactionClient,
-  ): Promise<(TransactionType & { agentId: number })[]> {
+  ): Promise<(TransactionData & { agentId: number })[]> {
     try {
       const db = this.getClient(tx);
-      // Prisma doesn't have a direct strftime, but we can use GTE with Date object
       const startDate = new Date(thirtyDaysAgoFormatted);
 
       const transactions = await db.transaction.findMany({
@@ -106,10 +117,14 @@ class TransactionModel implements ITransactionModel {
       });
 
       return transactions.map((t) => ({
-        ...t,
+        id: t.id.toString(),
+        clientId: t.clientId,
+        amount: t.amount,
+        type: t.type.toString() as TransactionType,
+        description: t.description ?? undefined,
         createdAt: t.createdAt.toISOString(),
         agentId: t.client.agentId,
-      })) as unknown as (TransactionType & { agentId: number })[];
+      }));
     } catch (error) {
       logger.error("Error fetching accounting transactions with Prisma:", {
         error,

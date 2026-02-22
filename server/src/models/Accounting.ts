@@ -1,5 +1,6 @@
 import prisma from "../services/prisma";
 import logger from "../config/logger";
+import { TransactionType } from "../types/transaction.types";
 
 type TimeSeriesPoint = {
   date: string;
@@ -55,7 +56,7 @@ class AccountingModel implements IAccountingModel {
   }
 
   private async getAggregatedData(
-    type: string | string[],
+    type: TransactionType | TransactionType[],
     fiscalYear: number,
     startDate: Date,
   ): Promise<RawTimeSeriesPoint[]> {
@@ -98,15 +99,23 @@ class AccountingModel implements IAccountingModel {
         inscriptionFeesData,
         reactivationFeesData,
       ] = await Promise.all([
-        this.getAggregatedData("Depot", currentFiscalYear, thirtyDaysAgo),
-        this.getAggregatedData("Retrait", currentFiscalYear, thirtyDaysAgo),
         this.getAggregatedData(
-          "FraisInscription",
+          TransactionType.Depot,
           currentFiscalYear,
           thirtyDaysAgo,
         ),
         this.getAggregatedData(
-          "FraisReactivation",
+          TransactionType.Retrait,
+          currentFiscalYear,
+          thirtyDaysAgo,
+        ),
+        this.getAggregatedData(
+          TransactionType.FraisInscription,
+          currentFiscalYear,
+          thirtyDaysAgo,
+        ),
+        this.getAggregatedData(
+          TransactionType.FraisReactivation,
           currentFiscalYear,
           thirtyDaysAgo,
         ),

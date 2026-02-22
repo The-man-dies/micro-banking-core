@@ -7,47 +7,51 @@ import Ticket from "../models/Ticket";
 import Transaction from "../models/Transaction";
 import { ClientDto } from "../types/client.types";
 import { ApiResponse } from "../utils/response.handler";
+import { TransactionType } from "../types/transaction.types";
+import { Prisma } from "../generated/client/client";
 
 export const createClient = async (req: AuthRequest, res: Response) => {
   try {
     const { montantEngagement, ...clientData } = req.body as ClientDto;
 
-    const result = await prisma.$transaction(async (tx) => {
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
+    const result = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30);
 
-      const newClient = await Client.create(
-        {
-          ...clientData,
-          accountBalance: 0,
-          montantEngagement: montantEngagement,
-          accountExpiresAt: expiresAt.toISOString(),
-          status: "active",
-        },
-        tx as any,
-      );
+        const newClient = await Client.create(
+          {
+            ...clientData,
+            accountBalance: 0,
+            montantEngagement: montantEngagement,
+            accountExpiresAt: expiresAt.toISOString(),
+            status: "active",
+          },
+          tx,
+        );
 
-      await Transaction.create(
-        {
-          clientId: newClient.id as unknown as number,
-          amount: montantEngagement,
-          type: "FraisInscription",
-          description: `Frais d'inscription initiaux.`,
-        },
-        tx as any,
-      );
+        await Transaction.create(
+          {
+            clientId: newClient.id as unknown as number,
+            amount: montantEngagement,
+            type: TransactionType.FraisInscription,
+            description: `Frais d'inscription initiaux.`,
+          },
+          tx,
+        );
 
-      await Ticket.create(
-        {
-          description: `Ticket initial pour le client ${newClient.id}`,
-          status: "active",
-          clientId: newClient.id as unknown as number,
-        },
-        tx as any,
-      );
+        await Ticket.create(
+          {
+            description: `Ticket initial pour le client ${newClient.id}`,
+            status: "active",
+            clientId: newClient.id as unknown as number,
+          },
+          tx,
+        );
 
-      return newClient;
-    });
+        return newClient;
+      },
+    );
 
     logger.info("Client, transaction, and ticket created successfully", {
       clientId: result.id,
@@ -69,39 +73,41 @@ export const depositToAccount = async (req: AuthRequest, res: Response) => {
     const clientId = parseInt(req.params.id, 10);
     const { amount } = req.body;
 
-    const result = await prisma.$transaction(async (tx) => {
-      const client = await Client.findById(clientId, tx as any);
-      if (!client) {
-        throw new Error("Client not found");
-      }
+    const result = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const client = await Client.findById(clientId, tx);
+        if (!client) {
+          throw new Error("Client not found");
+        }
 
-      if (client.status === "expired") {
-        throw new Error(
-          "Cannot deposit to an expired account. Please renew first.",
+        if (client.status === "expired") {
+          throw new Error(
+            "Cannot deposit to an expired account. Please renew first.",
+          );
+        }
+
+        if (amount !== client.montantEngagement) {
+          throw new Error(
+            `Le montant du dépôt (${amount} F) doit être égal au montant d'engagement du client (${client.montantEngagement} F).`,
+          );
+        }
+
+        const newBalance = client.accountBalance + amount;
+        await Client.update(clientId, { accountBalance: newBalance }, tx);
+
+        await Transaction.create(
+          {
+            clientId: client.id as unknown as number,
+            amount: amount,
+            type: "Depot",
+            description: `Dépôt sur le compte.`,
+          },
+          tx,
         );
-      }
 
-      if (amount !== client.montantEngagement) {
-        throw new Error(
-          `Le montant du dépôt (${amount} F) doit être égal au montant d'engagement du client (${client.montantEngagement} F).`,
-        );
-      }
-
-      const newBalance = client.accountBalance + amount;
-      await Client.update(clientId, { accountBalance: newBalance }, tx as any);
-
-      await Transaction.create(
-        {
-          clientId: client.id as unknown as number,
-          amount: amount,
-          type: "Depot",
-          description: `Dépôt sur le compte.`,
-        },
-        tx as any,
-      );
-
-      return { newBalance };
-    });
+        return { newBalance };
+      },
+    );
 
     logger.info(
       `Deposited ${amount} to client account ${clientId}. New balance: ${result.newBalance}`,
@@ -126,8 +132,8 @@ export const renewAccount = async (req: AuthRequest, res: Response) => {
     const clientId = parseInt(req.params.id, 10);
     const { fraisReactivation } = req.body;
 
-    await prisma.$transaction(async (tx) => {
-      const client = await Client.findById(clientId, tx as any);
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const client = await Client.findById(clientId, tx);
       if (!client) {
         throw new Error("Client not found");
       }
@@ -142,7 +148,7 @@ export const renewAccount = async (req: AuthRequest, res: Response) => {
           accountExpiresAt: newExpiresAt.toISOString(),
           status: "active",
         },
-        tx as any,
+        tx,
       );
 
       await Transaction.create(
@@ -152,7 +158,7 @@ export const renewAccount = async (req: AuthRequest, res: Response) => {
           type: "FraisReactivation",
           description: `Frais de réactivation du compte.`,
         },
-        tx as any,
+        tx,
       );
 
       await Ticket.create(
@@ -161,7 +167,7 @@ export const renewAccount = async (req: AuthRequest, res: Response) => {
           status: "active",
           clientId: client.id as unknown as number,
         },
-        tx as any,
+        tx,
       );
     });
 
@@ -330,7 +336,7 @@ export const expireClientAccount = async (req: AuthRequest, res: Response) => {
         {
           clientId: client.id as unknown as number,
           amount: 0,
-          type: "Expiration",
+          type: TransactionType.Expiration,
           description: `Account manually expired by admin.`,
         },
         tx as any,
