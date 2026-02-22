@@ -8,7 +8,7 @@ import Transaction from "../models/Transaction";
 import { ClientDto } from "../types/client.types";
 import { ApiResponse } from "../utils/response.handler";
 import { TransactionType } from "../types/transaction.types";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../generated/client/client";
 import { databaseService } from "../services/database";
 
 export const createClient = async (req: AuthRequest, res: Response) => {
