@@ -55,7 +55,7 @@ const createAdmin = async () => {
 
     if (existingAdmin) {
       logger.info(`Updating password for existing admin: ${username}`);
-      await Admin.updatePassword(username, password);
+      await Admin.update(existingAdmin.id, { username, password });
       logger.info("Admin password updated successfully.");
     } else {
       logger.info(`Creating new admin: ${username}`);

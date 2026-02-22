@@ -1,11 +1,15 @@
-import { Prisma } from "../generated/client/client";
+import { Prisma } from "@prisma/client";
 import logger from "../config/logger";
 import { databaseService } from "../services/database";
 import globalPrisma from "../services/prisma";
 import { TicketType, TicketDto } from "../types/ticket.types";
 
 export interface ITicketModel {
-  create(ticket: TicketDto, tx?: Prisma.TransactionClient): Promise<TicketType>;
+  create(
+    ticket: TicketDto,
+    tx?: Prisma.TransactionClient,
+    fiscalYear?: number,
+  ): Promise<TicketType>;
   findById(
     id: number,
     tx?: Prisma.TransactionClient,
@@ -26,10 +30,12 @@ class TicketModel implements ITicketModel {
   public async create(
     ticket: TicketDto,
     tx?: Prisma.TransactionClient,
+    fiscalYear?: number,
   ): Promise<TicketType> {
     try {
       const db = this.getClient(tx);
-      const currentFiscalYear = await databaseService.getCurrentFiscalYear();
+      const currentFiscalYear =
+        fiscalYear ?? (await databaseService.getCurrentFiscalYear());
 
       const result = await db.ticket.create({
         data: {

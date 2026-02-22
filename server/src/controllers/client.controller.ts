@@ -8,11 +8,13 @@ import Transaction from "../models/Transaction";
 import { ClientDto } from "../types/client.types";
 import { ApiResponse } from "../utils/response.handler";
 import { TransactionType } from "../types/transaction.types";
-import { Prisma } from "../generated/client/client";
+import { Prisma } from "@prisma/client";
+import { databaseService } from "../services/database";
 
 export const createClient = async (req: AuthRequest, res: Response) => {
   try {
     const { montantEngagement, ...clientData } = req.body as ClientDto;
+    const currentFiscalYear = await databaseService.getCurrentFiscalYear();
 
     const result = await prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
@@ -28,6 +30,7 @@ export const createClient = async (req: AuthRequest, res: Response) => {
             status: "active",
           },
           tx,
+          currentFiscalYear,
         );
 
         await Transaction.create(
@@ -38,6 +41,7 @@ export const createClient = async (req: AuthRequest, res: Response) => {
             description: `Frais d'inscription initiaux.`,
           },
           tx,
+          currentFiscalYear,
         );
 
         await Ticket.create(
@@ -47,10 +51,12 @@ export const createClient = async (req: AuthRequest, res: Response) => {
             clientId: newClient.id as unknown as number,
           },
           tx,
+          currentFiscalYear,
         );
 
         return newClient;
       },
+      { timeout: 15000, maxWait: 10000 },
     );
 
     logger.info("Client, transaction, and ticket created successfully", {
@@ -63,7 +69,7 @@ export const createClient = async (req: AuthRequest, res: Response) => {
       201,
     );
   } catch (error) {
-    logger.error("Error creating client:", { error });
+    logger.error(`Error creating client: ${error}`);
     return ApiResponse.error(res, "Failed to create client", null, 500);
   }
 };
@@ -72,6 +78,7 @@ export const depositToAccount = async (req: AuthRequest, res: Response) => {
   try {
     const clientId = parseInt(req.params.id, 10);
     const { amount } = req.body;
+    const currentFiscalYear = await databaseService.getCurrentFiscalYear();
 
     const result = await prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
@@ -103,10 +110,12 @@ export const depositToAccount = async (req: AuthRequest, res: Response) => {
             description: `Dépôt sur le compte.`,
           },
           tx,
+          currentFiscalYear,
         );
 
         return { newBalance };
       },
+      { timeout: 15000, maxWait: 10000 },
     );
 
     logger.info(
@@ -131,45 +140,51 @@ export const renewAccount = async (req: AuthRequest, res: Response) => {
   try {
     const clientId = parseInt(req.params.id, 10);
     const { fraisReactivation } = req.body;
+    const currentFiscalYear = await databaseService.getCurrentFiscalYear();
 
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const client = await Client.findById(clientId, tx);
-      if (!client) {
-        throw new Error("Client not found");
-      }
+    await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const client = await Client.findById(clientId, tx);
+        if (!client) {
+          throw new Error("Client not found");
+        }
 
-      const newExpiresAt = new Date();
-      newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+        const newExpiresAt = new Date();
+        newExpiresAt.setDate(newExpiresAt.getDate() + 30);
 
-      await Client.update(
-        clientId,
-        {
-          montantEngagement: fraisReactivation,
-          accountExpiresAt: newExpiresAt.toISOString(),
-          status: "active",
-        },
-        tx,
-      );
+        await Client.update(
+          clientId,
+          {
+            montantEngagement: fraisReactivation,
+            accountExpiresAt: newExpiresAt.toISOString(),
+            status: "active",
+          },
+          tx,
+        );
 
-      await Transaction.create(
-        {
-          clientId: client.id as unknown as number,
-          amount: fraisReactivation,
-          type: "FraisReactivation",
-          description: `Frais de réactivation du compte.`,
-        },
-        tx,
-      );
+        await Transaction.create(
+          {
+            clientId: client.id as unknown as number,
+            amount: fraisReactivation,
+            type: "FraisReactivation",
+            description: `Frais de réactivation du compte.`,
+          },
+          tx,
+          currentFiscalYear,
+        );
 
-      await Ticket.create(
-        {
-          description: `Ticket de renouvellement pour le client ${client.id}`,
-          status: "active",
-          clientId: client.id as unknown as number,
-        },
-        tx,
-      );
-    });
+        await Ticket.create(
+          {
+            description: `Ticket de renouvellement pour le client ${client.id}`,
+            status: "active",
+            clientId: client.id as unknown as number,
+          },
+          tx,
+          currentFiscalYear,
+        );
+      },
+      { timeout: 15000, maxWait: 10000 },
+    );
 
     logger.info(`Client account ${clientId} renewed successfully.`);
     return ApiResponse.success(res, "Account renewed successfully", {
@@ -244,56 +259,61 @@ export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
   try {
     const clientId = parseInt(req.params.id, 10);
     const { amount: withdrawalAmount } = req.body;
+    const currentFiscalYear = await databaseService.getCurrentFiscalYear();
 
-    const result = await prisma.$transaction(async (tx) => {
-      const client = await Client.findById(clientId, tx as any);
-      if (!client) {
-        throw new Error("Client not found");
-      }
+    const result = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const client = await Client.findById(clientId, tx);
+        if (!client) {
+          throw new Error("Client not found");
+        }
 
-      if (withdrawalAmount <= 0) {
-        throw new Error("Le montant du retrait doit être supérieur à zéro.");
-      }
+        if (withdrawalAmount <= 0) {
+          throw new Error("Le montant du retrait doit être supérieur à zéro.");
+        }
 
-      if (client.accountBalance === 0) {
-        throw new Error(
-          "Impossible de retirer. Le solde du compte est de zéro.",
+        if (client.accountBalance === 0) {
+          throw new Error(
+            "Impossible de retirer. Le solde du compte est de zéro.",
+          );
+        }
+
+        if (withdrawalAmount > client.accountBalance) {
+          throw new Error(
+            "Le montant du retrait ne peut pas être supérieur au solde disponible.",
+          );
+        }
+
+        const newBalance = client.accountBalance - withdrawalAmount;
+        let newStatus = client.status;
+        const now = new Date();
+        const expiresAt = new Date(client.accountExpiresAt);
+
+        if (newBalance === 0 && now > expiresAt) {
+          newStatus = "expired";
+        }
+
+        await Client.update(
+          clientId,
+          { accountBalance: newBalance, status: newStatus },
+          tx,
         );
-      }
 
-      if (withdrawalAmount > client.accountBalance) {
-        throw new Error(
-          "Le montant du retrait ne peut pas être supérieur au solde disponible.",
+        await Transaction.create(
+          {
+            clientId: client.id as unknown as number,
+            amount: withdrawalAmount,
+            type: "Retrait",
+            description: `Retrait du compte.`,
+          },
+          tx,
+          currentFiscalYear,
         );
-      }
 
-      const newBalance = client.accountBalance - withdrawalAmount;
-      let newStatus = client.status;
-      const now = new Date();
-      const expiresAt = new Date(client.accountExpiresAt);
-
-      if (newBalance === 0 && now > expiresAt) {
-        newStatus = "expired";
-      }
-
-      await Client.update(
-        clientId,
-        { accountBalance: newBalance, status: newStatus },
-        tx as any,
-      );
-
-      await Transaction.create(
-        {
-          clientId: client.id as unknown as number,
-          amount: withdrawalAmount,
-          type: "Retrait",
-          description: `Retrait du compte.`,
-        },
-        tx as any,
-      );
-
-      return { newBalance, withdrawalAmount };
-    });
+        return { newBalance, withdrawalAmount };
+      },
+      { timeout: 15000, maxWait: 10000 },
+    );
 
     logger.info(
       `Client account ${clientId} withdrawn successfully. Amount: ${result.withdrawalAmount}. New balance: ${result.newBalance}`,
@@ -319,29 +339,34 @@ export const payoutClientAccount = async (req: AuthRequest, res: Response) => {
 export const expireClientAccount = async (req: AuthRequest, res: Response) => {
   try {
     const clientId = parseInt(req.params.id, 10);
+    const currentFiscalYear = await databaseService.getCurrentFiscalYear();
 
-    await prisma.$transaction(async (tx) => {
-      const client = await Client.findById(clientId, tx as any);
-      if (!client) {
-        throw new Error("Client not found");
-      }
+    await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const client = await Client.findById(clientId, tx);
+        if (!client) {
+          throw new Error("Client not found");
+        }
 
-      if (client.accountBalance !== 0) {
-        throw new Error("Cannot expire account with a non-zero balance.");
-      }
+        if (client.accountBalance !== 0) {
+          throw new Error("Cannot expire account with a non-zero balance.");
+        }
 
-      await Client.update(clientId, { status: "expired" }, tx as any);
+        await Client.update(clientId, { status: "expired" }, tx);
 
-      await Transaction.create(
-        {
-          clientId: client.id as unknown as number,
-          amount: 0,
-          type: TransactionType.Expiration,
-          description: `Account manually expired by admin.`,
-        },
-        tx as any,
-      );
-    });
+        await Transaction.create(
+          {
+            clientId: client.id as unknown as number,
+            amount: 0,
+            type: TransactionType.Expiration,
+            description: `Account manually expired by admin.`,
+          },
+          tx,
+          currentFiscalYear,
+        );
+      },
+      { timeout: 15000, maxWait: 10000 },
+    );
 
     logger.info(`Client account ${clientId} expired successfully.`);
     return ApiResponse.success(

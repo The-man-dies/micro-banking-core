@@ -31,6 +31,17 @@ class DatabaseService {
     }
   }
 
+  public async closeDbConnection(): Promise<void> {
+    try {
+      logger.info("Closing database connection via Prisma...");
+      await prisma.$disconnect();
+      logger.info("Database connection closed.");
+    } catch (error) {
+      logger.error("Failed to close database connection:", { error });
+      throw error;
+    }
+  }
+
   async getCurrentFiscalYear(): Promise<number> {
     try {
       const currentCalendarYear = new Date().getFullYear();

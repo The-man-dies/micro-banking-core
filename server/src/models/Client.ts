@@ -1,4 +1,4 @@
-import { Prisma } from "../generated/client/client";
+import { Prisma } from "@prisma/client";
 import logger from "../config/logger";
 import { databaseService } from "../services/database";
 import globalPrisma from "../services/prisma";
@@ -8,6 +8,7 @@ export interface IClientModel {
   create(
     client: Partial<ClientDto>,
     tx?: Prisma.TransactionClient,
+    fiscalYear?: number,
   ): Promise<ClientType>;
   findById(
     id: string | number,
@@ -29,10 +30,12 @@ class ClientModel implements IClientModel {
   public async create(
     client: Partial<ClientDto>,
     tx?: Prisma.TransactionClient,
+    fiscalYear?: number,
   ): Promise<ClientType> {
     try {
       const db = this.getClient(tx);
-      const currentFiscalYear = await databaseService.getCurrentFiscalYear();
+      const currentFiscalYear =
+        fiscalYear ?? (await databaseService.getCurrentFiscalYear());
 
       const result = await db.client.create({
         data: {
