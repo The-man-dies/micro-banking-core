@@ -6,9 +6,8 @@ import logger from "../config/logger";
 
 export const getAllTransactions = async (req: Request, res: Response) => {
   try {
-    const db = await databaseService.getDbConnection();
     const currentFiscalYear = await databaseService.getCurrentFiscalYear();
-    const transactions = await Transaction.getAll(db, currentFiscalYear);
+    const transactions = await Transaction.getAll(currentFiscalYear);
     return ApiResponse.success(
       res,
       "Transactions retrieved successfully",

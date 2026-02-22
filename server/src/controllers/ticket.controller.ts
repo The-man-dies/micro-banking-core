@@ -4,14 +4,12 @@ import logger from "../config/logger";
 import { AuthRequest } from "../types/express.d";
 import Ticket from "../models/Ticket";
 import { TicketDto } from "../types/ticket.types";
-import { databaseService } from "../services/database";
+import prisma from "../services/prisma";
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
-  const db = await databaseService.getDbConnection();
   try {
     const ticketData: TicketDto = req.body;
-    // The create method now requires a db instance for potential transactions
-    const newTicket = await Ticket.create(ticketData, db);
+    const newTicket = await Ticket.create(ticketData);
     logger.info("Ticket created successfully:", { ticketId: newTicket.id });
     return ApiResponse.success(
       res,
@@ -67,7 +65,7 @@ export const deleteTicket = async (req: AuthRequest, res: Response) => {
     if (!deleted) {
       return ApiResponse.error(res, "Ticket not found", null, 404);
     }
-    logger.info("Agent deleted successfully:", { ticketId: ticketId });
+    logger.info("Ticket deleted successfully:", { ticketId: ticketId });
     return ApiResponse.success(res, "Ticket deleted successfully", null, 204);
   } catch (error) {
     logger.error("Error deleting ticket:", { error });
@@ -78,10 +76,7 @@ export const deleteTicket = async (req: AuthRequest, res: Response) => {
 // You might also want a getAllTickets function
 export const getAllTickets = async (req: AuthRequest, res: Response) => {
   try {
-    const db = await databaseService.getDbConnection();
-    const tickets = await db.all(
-      "SELECT id, description, status, clientId FROM Ticket",
-    );
+    const tickets = await prisma.ticket.findMany();
     logger.info("All tickets retrieved successfully.");
     return ApiResponse.success(res, "Tickets retrieved successfully", tickets);
   } catch (error) {

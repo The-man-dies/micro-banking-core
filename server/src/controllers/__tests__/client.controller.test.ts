@@ -1,4 +1,3 @@
-import { databaseService } from "../../services/database";
 import {
   createClient,
   depositToAccount,
@@ -6,7 +5,7 @@ import {
   payoutClientAccount,
 } from "../client.controller";
 import { Request, Response } from "express";
-import { Database } from "sqlite";
+import prisma from "../../services/prisma";
 
 // Mock Express request and response
 const mockRequest = (body: any, params: any = {}): Partial<Request> => ({
@@ -25,38 +24,48 @@ const mockResponse = (): Partial<Response> & {
 };
 
 describe("Client Controller", () => {
-  let db: Database;
-
   beforeAll(async () => {
-    db = await databaseService.getDbConnection();
-    await databaseService.initializeDatabase(db);
-    await db.run(
-      "INSERT INTO Agent (id, firstname, lastname) VALUES (1, 'Test', 'Agent')",
-    );
+    // Ensure test agent exists
+    await prisma.agent.upsert({
+      where: { id: 1 },
+      update: {},
+      create: {
+        id: 1,
+        firstname: "Test",
+        lastname: "Agent",
+        createdFiscalYear: 2026,
+      },
+    });
   });
 
   afterEach(async () => {
-    await db.exec("DELETE FROM Transactions");
-    await db.exec("DELETE FROM Ticket");
-    await db.exec("DELETE FROM Client");
-    await db.exec(
-      "DELETE FROM sqlite_sequence WHERE name IN ('Transactions', 'Ticket', 'Client');",
-    );
+    await prisma.transaction.deleteMany();
+    await prisma.ticket.deleteMany();
+    await prisma.client.deleteMany();
   });
 
   afterAll(async () => {
-    await db.close();
+    await prisma.$disconnect();
   });
 
   // Helper to create a client for use in other tests
   const createTestClient = async (balance = 0, montantEngagement = 1000) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
-    await db.run(
-      `INSERT INTO Client (id, firstname, lastname, agentId, accountBalance, montantEngagement, accountExpiresAt, status) 
-       VALUES (1, 'Test', 'User', 1, ?, ?, ?, 'active')`,
-      [balance, montantEngagement, expiresAt.toISOString()],
-    );
+    await prisma.client.create({
+      data: {
+        id: 1,
+        firstname: "Test",
+        lastname: "User",
+        agentId: 1,
+        accountBalance: balance,
+        montantEngagement: montantEngagement,
+        accountExpiresAt: expiresAt.toISOString(),
+        status: "active",
+        createdFiscalYear: 2026,
+        phone: "12345678" + Math.random(), // Unique phone
+      },
+    });
   };
 
   describe("createClient", () => {
@@ -68,28 +77,26 @@ describe("Client Controller", () => {
         location: "Bamako",
         agentId: 1,
         montantEngagement: 1000,
+        createdFiscalYear: 2026,
       }) as Request;
       const res = mockResponse() as Response;
 
-      // We need to override getDbConnection for the controller to use our in-memory db instance
-      const getDbConnectionSpy = jest
-        .spyOn(databaseService, "getDbConnection")
-        .mockResolvedValue(db);
-
       await createClient(req, res);
 
-      getDbConnectionSpy.mockRestore();
-
       expect(res.status).toHaveBeenCalledWith(201);
-      const client = await db.get("SELECT * FROM Client WHERE id = 1");
+      const client = await prisma.client.findFirst({
+        where: { firstname: "John" },
+      });
       expect(client).toBeDefined();
-      expect(client.accountBalance).toBe(0);
-      const transaction = await db.get(
-        "SELECT * FROM Transactions WHERE clientId = 1",
-      );
+      expect(client?.accountBalance).toBe(0);
+      const transaction = await prisma.transaction.findFirst({
+        where: { clientId: client?.id },
+      });
       expect(transaction).toBeDefined();
-      expect(transaction.type).toBe("FraisInscription");
-      const ticket = await db.get("SELECT * FROM Ticket WHERE clientId = 1");
+      expect(transaction?.type).toBe("FraisInscription");
+      const ticket = await prisma.ticket.findFirst({
+        where: { clientId: client?.id },
+      });
       expect(ticket).toBeDefined();
     });
   });
@@ -101,27 +108,21 @@ describe("Client Controller", () => {
       const req = mockRequest({ amount: engagement }, { id: "1" }) as Request; // Deposit matching engagement
       const res = mockResponse() as Response;
 
-      const getDbConnectionSpy = jest
-        .spyOn(databaseService, "getDbConnection")
-        .mockResolvedValue(db);
-
       await depositToAccount(req, res);
-
-      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ data: { newBalance: 1100 } }),
       ); // 100 + 1000 = 1100
 
-      const client = await db.get("SELECT * FROM Client WHERE id = 1");
-      expect(client.accountBalance).toBe(1100);
+      const client = await prisma.client.findUnique({ where: { id: 1 } });
+      expect(client?.accountBalance).toBe(1100);
 
-      const transaction = await db.get(
-        "SELECT * FROM Transactions WHERE type = 'Depot'",
-      );
+      const transaction = await prisma.transaction.findFirst({
+        where: { type: "Depot" },
+      });
       expect(transaction).toBeDefined();
-      expect(transaction.amount).toBe(engagement);
+      expect(transaction?.amount).toBe(engagement);
     });
 
     it("should return 400 if deposit amount does not match engagement amount", async () => {
@@ -130,13 +131,7 @@ describe("Client Controller", () => {
       const req = mockRequest({ amount: 500 }, { id: "1" }) as Request; // Deposit NOT matching engagement
       const res = mockResponse() as Response;
 
-      const getDbConnectionSpy = jest
-        .spyOn(databaseService, "getDbConnection")
-        .mockResolvedValue(db);
-
       await depositToAccount(req, res);
-
-      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
@@ -145,8 +140,8 @@ describe("Client Controller", () => {
         }),
       );
 
-      const client = await db.get("SELECT * FROM Client WHERE id = 1");
-      expect(client.accountBalance).toBe(100); // Balance should not change
+      const client = await prisma.client.findUnique({ where: { id: 1 } });
+      expect(client?.accountBalance).toBe(100); // Balance should not change
     });
   });
   describe("renewAccount", () => {
@@ -158,24 +153,18 @@ describe("Client Controller", () => {
       ) as Request;
       const res = mockResponse() as Response;
 
-      const getDbConnectionSpy = jest
-        .spyOn(databaseService, "getDbConnection")
-        .mockResolvedValue(db);
-
       await renewAccount(req, res);
-
-      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(200);
 
-      const client = await db.get("SELECT * FROM Client WHERE id = 1");
-      expect(client.montantEngagement).toBe(1500);
+      const client = await prisma.client.findUnique({ where: { id: 1 } });
+      expect(client?.montantEngagement).toBe(1500);
 
-      const transaction = await db.get(
-        "SELECT * FROM Transactions WHERE type = 'FraisReactivation'",
-      );
+      const transaction = await prisma.transaction.findFirst({
+        where: { type: "FraisReactivation" },
+      });
       expect(transaction).toBeDefined();
-      expect(transaction.amount).toBe(1500);
+      expect(transaction?.amount).toBe(1500);
     });
   });
 
@@ -185,13 +174,7 @@ describe("Client Controller", () => {
       const req = mockRequest({}, { id: "1" }) as Request;
       const res = mockResponse() as Response;
 
-      const getDbConnectionSpy = jest
-        .spyOn(databaseService, "getDbConnection")
-        .mockResolvedValue(db);
-
       await payoutClientAccount(req, res);
-
-      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
@@ -203,15 +186,15 @@ describe("Client Controller", () => {
         }),
       );
 
-      const client = await db.get("SELECT * FROM Client WHERE id = 1");
-      expect(client.accountBalance).toBe(0);
-      expect(client.status).toBe("expired");
+      const client = await prisma.client.findUnique({ where: { id: 1 } });
+      expect(client?.accountBalance).toBe(0);
+      expect(client?.status).toBe("expired");
 
-      const transaction = await db.get(
-        "SELECT * FROM Transactions WHERE type = 'Retrait'",
-      );
+      const transaction = await prisma.transaction.findFirst({
+        where: { type: "Retrait" },
+      });
       expect(transaction).toBeDefined();
-      expect(transaction.amount).toBe(5000);
+      expect(transaction?.amount).toBe(5000);
     });
 
     it("should return 400 if balance is zero", async () => {
@@ -219,13 +202,7 @@ describe("Client Controller", () => {
       const req = mockRequest({}, { id: "1" }) as Request;
       const res = mockResponse() as Response;
 
-      const getDbConnectionSpy = jest
-        .spyOn(databaseService, "getDbConnection")
-        .mockResolvedValue(db);
-
       await payoutClientAccount(req, res);
-
-      getDbConnectionSpy.mockRestore();
 
       expect(res.status).toHaveBeenCalledWith(400);
     });
