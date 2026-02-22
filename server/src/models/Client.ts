@@ -1,113 +1,132 @@
-import type { Database } from "sqlite";
+import { Prisma } from "../generated/client/client";
 import logger from "../config/logger";
 import { databaseService } from "../services/database";
+import globalPrisma from "../services/prisma";
 import { ClientType, ClientDto } from "../types/client.types";
 
 export interface IClientModel {
-  create(client: Partial<ClientDto>, db: Database): Promise<ClientType>;
-  findById(id: string | number, db?: Database): Promise<ClientType | null>;
+  create(
+    client: Partial<ClientDto>,
+    tx?: Prisma.TransactionClient,
+    fiscalYear?: number,
+  ): Promise<ClientType>;
+  findById(
+    id: string | number,
+    tx?: Prisma.TransactionClient,
+  ): Promise<ClientType | null>;
   update(
     id: string | number,
     client: Partial<ClientType>,
-    db?: Database,
+    tx?: Prisma.TransactionClient,
   ): Promise<ClientType | null>;
-  delete(id: string | number, db?: Database): Promise<boolean>;
+  delete(id: string | number, tx?: Prisma.TransactionClient): Promise<boolean>;
 }
 
 class ClientModel implements IClientModel {
-  private async getConnection(db?: Database): Promise<Database> {
-    return db || databaseService.getDbConnection();
+  private getClient(tx?: Prisma.TransactionClient) {
+    return tx || globalPrisma;
   }
 
   public async create(
     client: Partial<ClientDto>,
-    db: Database,
+    tx?: Prisma.TransactionClient,
+    fiscalYear?: number,
   ): Promise<ClientType> {
     try {
-      const currentFiscalYear = await databaseService.getCurrentFiscalYear();
-      const result = await db.run(
-        `INSERT INTO Client (firstname, lastname, email, phone, location, agentId, accountBalance, montantEngagement, accountExpiresAt, status, createdFiscalYear) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        client.firstname,
-        client.lastname,
-        client.email || null,
-        client.phone,
-        client.location,
-        client.agentId,
-        client.accountBalance,
-        client.montantEngagement,
-        client.accountExpiresAt,
-        client.status,
-        currentFiscalYear,
-      );
+      const db = this.getClient(tx);
+      const currentFiscalYear =
+        fiscalYear ?? (await databaseService.getCurrentFiscalYear());
 
-      const created = await this.findById<ClientType>(result.lastID!, db);
-      if (!created) {
-        throw new Error("Failed to create or find client after insertion.");
-      }
-      return created;
-    } catch (error) {
-      logger.error(error instanceof Error ? error.message : "unknown error", {
-        error,
+      const result = await db.client.create({
+        data: {
+          firstname: client.firstname!,
+          lastname: client.lastname!,
+          email: client.email || null,
+          phone: client.phone!,
+          location: client.location || "",
+          agentId: client.agentId!,
+          accountBalance: client.accountBalance || 0,
+          montantEngagement: client.montantEngagement || 0,
+          accountExpiresAt: client.accountExpiresAt!,
+          status: client.status || "active",
+          createdFiscalYear: currentFiscalYear,
+        },
       });
+
+      return result as unknown as ClientType;
+    } catch (error) {
+      logger.error("Error creating client with Prisma:", { error });
       throw error;
     }
   }
 
-  public async findById<T = any>(
+  public async findById(
     id: string | number,
-    db?: Database,
-  ): Promise<ClientType | null | T> {
-    const conn = await this.getConnection(db);
-    const row = await conn.get<ClientType>(
-      `SELECT * FROM Client WHERE id = ?`,
-      id,
-    );
-    return row || null;
+    tx?: Prisma.TransactionClient,
+  ): Promise<ClientType | null> {
+    try {
+      const db = this.getClient(tx);
+      const clientId = typeof id === "string" ? parseInt(id, 10) : id;
+      if (isNaN(clientId)) return null;
+
+      const row = await db.client.findUnique({
+        where: { id: clientId },
+      });
+      return (row as unknown as ClientType) || null;
+    } catch (error) {
+      logger.error("Error finding client with Prisma:", { error });
+      throw error;
+    }
   }
 
   public async update(
     id: string | number,
     client: Partial<ClientType>,
-    db?: Database,
+    tx?: Prisma.TransactionClient,
   ): Promise<ClientType | null> {
     try {
-      const conn = await this.getConnection(db);
-      const existing = await this.findById(id, conn);
-      if (!existing) return null;
+      const db = this.getClient(tx);
+      const clientId = typeof id === "string" ? parseInt(id, 10) : id;
+      if (isNaN(clientId)) return null;
 
-      const updatedClient = { ...existing, ...client };
-
-      await conn.run(
-        `UPDATE Client SET firstname = ?, lastname = ?, email = ?, phone = ?, location = ?, agentId = ?, accountBalance = ?, montantEngagement = ?, accountExpiresAt = ?, status = ? WHERE id = ?`,
-        updatedClient.firstname,
-        updatedClient.lastname,
-        updatedClient.email,
-        updatedClient.phone,
-        updatedClient.location,
-        updatedClient.agentId,
-        updatedClient.accountBalance,
-        updatedClient.montantEngagement,
-        updatedClient.accountExpiresAt,
-        updatedClient.status,
-        id,
-      );
-      return this.findById(id, conn);
+      const result = await db.client.update({
+        where: { id: clientId },
+        data: {
+          firstname: client.firstname,
+          lastname: client.lastname,
+          email: client.email,
+          phone: client.phone,
+          location: client.location,
+          agentId: client.agentId,
+          accountBalance: client.accountBalance,
+          montantEngagement: client.montantEngagement,
+          accountExpiresAt: client.accountExpiresAt,
+          status: client.status,
+        },
+      });
+      return result as unknown as ClientType;
     } catch (error) {
-      logger.error(error instanceof Error ? error.message : "unknown error");
+      logger.error("Error updating client with Prisma:", { error });
       throw error;
     }
   }
 
-  public async delete(id: string | number, db?: Database): Promise<boolean> {
+  public async delete(
+    id: string | number,
+    tx?: Prisma.TransactionClient,
+  ): Promise<boolean> {
     try {
-      const conn = await this.getConnection(db);
-      const result = await conn.run(`DELETE FROM Client WHERE id = ?`, id);
-      return (result.changes ?? 0) > 0;
-    } catch (error) {
-      logger.error(error instanceof Error ? error.message : "unknown error", {
-        error,
+      const db = this.getClient(tx);
+      const clientId = typeof id === "string" ? parseInt(id, 10) : id;
+      if (isNaN(clientId)) return false;
+
+      await db.client.delete({
+        where: { id: clientId },
       });
-      throw error;
+      return true;
+    } catch (error) {
+      logger.error("Error deleting client with Prisma:", { error });
+      return false;
     }
   }
 }

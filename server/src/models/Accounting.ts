@@ -1,5 +1,6 @@
-import { databaseService } from "../services/database";
+import prisma from "../services/prisma";
 import logger from "../config/logger";
+import { TransactionType } from "../types/transaction.types";
 
 type TimeSeriesPoint = {
   date: string;
@@ -54,46 +55,74 @@ class AccountingModel implements IAccountingModel {
     return filledData;
   }
 
+  private async getAggregatedData(
+    type: TransactionType | TransactionType[],
+    fiscalYear: number,
+    startDate: Date,
+  ): Promise<RawTimeSeriesPoint[]> {
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        type: typeof type === "string" ? type : { in: type },
+        fiscalYear: fiscalYear,
+        createdAt: {
+          gte: startDate,
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const aggregated = transactions.reduce(
+      (acc: Record<string, RawTimeSeriesPoint>, t: any) => {
+        const date = t.createdAt.toISOString().split("T")[0];
+        if (!acc[date]) {
+          acc[date] = { date, totalAmount: 0, transactionCount: 0 };
+        }
+        acc[date].totalAmount += t.amount;
+        acc[date].transactionCount += 1;
+        return acc;
+      },
+      {} as Record<string, RawTimeSeriesPoint>,
+    );
+
+    return Object.values(aggregated);
+  }
+
   public async getAccountingData(currentFiscalYear: number) {
-    const db = await databaseService.getDbConnection();
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const thirtyDaysAgoString = thirtyDaysAgo.toISOString().split("T")[0];
+      thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-      const depositsData: RawTimeSeriesPoint[] = await db.all(
-        `SELECT strftime('%Y-%m-%d', createdAt) as date, SUM(amount) as totalAmount, COUNT(*) as transactionCount
-                 FROM Transactions 
-                 WHERE type = 'Depot' AND fiscalYear = ? AND date(createdAt) >= ? 
-                 GROUP BY date ORDER BY date ASC`,
-        [currentFiscalYear, thirtyDaysAgoString],
-      );
-
-      const payoutsData: RawTimeSeriesPoint[] = await db.all(
-        `SELECT strftime('%Y-%m-%d', createdAt) as date, SUM(amount) as totalAmount, COUNT(*) as transactionCount
-                 FROM Transactions 
-                 WHERE type = 'Retrait' AND fiscalYear = ? AND date(createdAt) >= ? 
-                 GROUP BY date ORDER BY date ASC`,
-        [currentFiscalYear, thirtyDaysAgoString],
-      );
-
-      const inscriptionFeesData: RawTimeSeriesPoint[] = await db.all(
-        `SELECT strftime('%Y-%m-%d', createdAt) as date, SUM(amount) as totalAmount, COUNT(*) as transactionCount
-                 FROM Transactions 
-                 WHERE type = 'FraisInscription' AND fiscalYear = ? AND date(createdAt) >= ? 
-                 GROUP BY date ORDER BY date ASC`,
-        [currentFiscalYear, thirtyDaysAgoString],
-      );
-
-      const reactivationFeesData: RawTimeSeriesPoint[] = await db.all(
-        `SELECT strftime('%Y-%m-%d', createdAt) as date, SUM(amount) as totalAmount, COUNT(*) as transactionCount
-                 FROM Transactions 
-                 WHERE type = 'FraisReactivation' AND fiscalYear = ? AND date(createdAt) >= ? 
-                 GROUP BY date ORDER BY date ASC`,
-        [currentFiscalYear, thirtyDaysAgoString],
-      );
+      const [
+        depositsData,
+        payoutsData,
+        inscriptionFeesData,
+        reactivationFeesData,
+      ] = await Promise.all([
+        this.getAggregatedData(
+          TransactionType.Depot,
+          currentFiscalYear,
+          thirtyDaysAgo,
+        ),
+        this.getAggregatedData(
+          TransactionType.Retrait,
+          currentFiscalYear,
+          thirtyDaysAgo,
+        ),
+        this.getAggregatedData(
+          TransactionType.FraisInscription,
+          currentFiscalYear,
+          thirtyDaysAgo,
+        ),
+        this.getAggregatedData(
+          TransactionType.FraisReactivation,
+          currentFiscalYear,
+          thirtyDaysAgo,
+        ),
+      ]);
 
       const maxDate = new Date();
+      maxDate.setHours(23, 59, 59, 999);
       const minDate = thirtyDaysAgo;
 
       return {
@@ -111,7 +140,7 @@ class AccountingModel implements IAccountingModel {
         ),
       };
     } catch (error) {
-      logger.error("Error fetching accounting data:", { error });
+      logger.error("Error fetching accounting data with Prisma:", { error });
       throw error;
     }
   }

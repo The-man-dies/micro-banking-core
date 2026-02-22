@@ -55,7 +55,7 @@ export const login = async (req: AuthRequest, res: Response) => {
       return ApiResponse.error(res, "Invalid credentials", null, 401);
     }
 
-    const isMatch = await bcrypt.compare(password, admin.password);
+    const isMatch = await bcrypt.compare(password, admin.password!);
     if (!isMatch) {
       logger.warn(
         `Login failed: Invalid credentials for username '${username}'`,
@@ -68,7 +68,7 @@ export const login = async (req: AuthRequest, res: Response) => {
       username: admin.username,
     });
 
-    await Admin.update(admin.id, { refreshToken });
+    await Admin.updateRefreshToken(admin.id, refreshToken);
 
     logger.info(`Admin '${username}' logged in successfully.`);
     return ApiResponse.success(res, "Login successful", {
@@ -158,5 +158,60 @@ export const status = (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error("Could not determine session status", { error });
     return ApiResponse.error(res, "Server error while checking status");
+  }
+};
+
+export const checkSetupStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const isInitialized = await Admin.exists();
+    return ApiResponse.success(res, "Setup status retrieved", {
+      isInitialized,
+    });
+  } catch (error) {
+    logger.error("Failed to check setup status", { error });
+    return ApiResponse.error(res, "Server error while checking setup status");
+  }
+};
+
+export const setupAdmin = async (req: AuthRequest, res: Response) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return ApiResponse.error(
+      res,
+      "Please provide username and password",
+      null,
+      400,
+    );
+  }
+
+  try {
+    const alreadyExists = await Admin.exists();
+    if (alreadyExists) {
+      logger.warn(`Unauthorized setup attempt from IP: ${req.ip}`);
+      return ApiResponse.error(
+        res,
+        "System is already initialized. Setup denied.",
+        null,
+        403,
+      );
+    }
+
+    const newAdmin = await Admin.create({ username, password });
+    logger.info(
+      `Initial administrator '${username}' created via setup wizard.`,
+    );
+
+    return ApiResponse.success(
+      res,
+      "Initial administrator created successfully",
+      {
+        id: newAdmin.id,
+        username: newAdmin.username,
+      },
+    );
+  } catch (error) {
+    logger.error("Initial setup failed", { error });
+    return ApiResponse.error(res, "Server error during initial setup");
   }
 };

@@ -30,6 +30,8 @@ interface AuthState {
     expiresAt: string;
     expiresIn: number;
   } | null>;
+  isInitialized: boolean | null;
+  checkSetupStatus: () => Promise<void>;
 }
 
 const useAuthStore = create<AuthState>()(
@@ -39,6 +41,7 @@ const useAuthStore = create<AuthState>()(
       refreshToken: null,
       lastActivity: Date.now(),
       isAuthenticated: false,
+      isInitialized: null,
 
       setAccessToken: (token: string | null) => {
         set({ accessToken: token, isAuthenticated: !!token });
@@ -48,6 +51,19 @@ const useAuthStore = create<AuthState>()(
       },
       updateActivity: () => {
         set({ lastActivity: Date.now() });
+      },
+      checkSetupStatus: async () => {
+        try {
+          const response = await api<ApiEnvelope<{ isInitialized: boolean }>>(
+            "/admin/setup-status",
+            { method: "GET", trackActivity: false },
+          );
+          if (response.success && response.data) {
+            set({ isInitialized: response.data.isInitialized });
+          }
+        } catch (error) {
+          console.error("Failed to check setup status:", error);
+        }
       },
       logout: async () => {
         const currentRefreshToken = get().refreshToken;

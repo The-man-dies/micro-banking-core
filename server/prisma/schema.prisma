@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum TransactionType {
+  FraisInscription
+  FraisReactivation
+  Depot
+  Retrait
+  Expiration
+}
+
+model Admin {
+  id                Int      @id @default(autoincrement())
+  username          String   @unique
+  password          String
+  refreshToken      String?
+  createdAt         DateTime @default(now())
+  createdFiscalYear Int
+}
+
+model Agent {
+  id                Int      @id @default(autoincrement())
+  firstname         String
+  lastname          String
+  email             String?  @unique
+  location          String?
+  createdFiscalYear Int
+  createdAt         DateTime @default(now())
+  clients           Client[]
+}
+
+model Client {
+  id                Int           @id @default(autoincrement())
+  firstname         String
+  lastname          String
+  email             String?       @unique
+  phone             String        @unique
+  location          String        @default("")
+  agentId           Int
+  agent             Agent         @relation(fields: [agentId], references: [id])
+  accountBalance    Float         @default(0)
+  montantEngagement Float         @default(0)
+  accountExpiresAt  DateTime
+  status            String        @default("active")
+  createdFiscalYear Int
+  createdAt         DateTime      @default(now())
+  tickets           Ticket[]
+  transactions      Transaction[]
+}
+
+model Ticket {
+  id                Int      @id @default(autoincrement())
+  description       String?
+  status            String
+  clientId          Int
+  client            Client   @relation(fields: [clientId], references: [id])
+  createdFiscalYear Int
+  createdAt         DateTime @default(now())
+}
+
+model Transaction {
+  id          Int             @id @default(autoincrement())
+  clientId    Int
+  client      Client          @relation(fields: [clientId], references: [id])
+  amount      Float
+  type        TransactionType
+  description String?
+  createdAt   DateTime        @default(now())
+  fiscalYear  Int
+}
+
+model AppSettings {
+  id         Int      @id @default(autoincrement())
+  fiscalYear Int      @unique
+  createdAt  DateTime @default(now())
+}
