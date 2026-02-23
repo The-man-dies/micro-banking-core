@@ -2,6 +2,7 @@ import prisma from "./prisma";
 import logger from "../config/logger";
 
 const EXPIRATION_CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000; // Check every 12 hours
+let expirationInterval: NodeJS.Timeout | null = null;
 
 export const startExpirationService = () => {
   logger.info("Starting account expiration service...");
@@ -10,7 +11,20 @@ export const startExpirationService = () => {
   checkAndExpireAccounts();
 
   // Schedule periodic checks
-  setInterval(checkAndExpireAccounts, EXPIRATION_CHECK_INTERVAL_MS);
+  if (!expirationInterval) {
+    expirationInterval = setInterval(
+      checkAndExpireAccounts,
+      EXPIRATION_CHECK_INTERVAL_MS,
+    );
+  }
+};
+
+export const stopExpirationService = () => {
+  if (expirationInterval) {
+    clearInterval(expirationInterval);
+    expirationInterval = null;
+    logger.info("Stopped account expiration service.");
+  }
 };
 
 export const checkAndExpireAccounts = async () => {
