@@ -1,6 +1,7 @@
 import express from "express";
 import { limiter } from "./middleware/limiter";
 import cors from "cors";
+import crypto from "node:crypto";
 import api from "./api";
 
 const app = express();
@@ -34,7 +35,16 @@ app.post(SHUTDOWN_PATH, (req, res) => {
   const shutdownToken = process.env.SHUTDOWN_TOKEN;
   const token = req.header("x-shutdown-token") as string | undefined;
 
-  if (!shutdownToken || token !== shutdownToken) {
+  let tokensMatch = false;
+  if (shutdownToken && token) {
+    const expected = Buffer.from(shutdownToken);
+    const received = Buffer.from(token);
+    if (expected.length === received.length) {
+      tokensMatch = crypto.timingSafeEqual(expected, received);
+    }
+  }
+
+  if (!tokensMatch) {
     return res.status(403).json({ error: "Forbidden" });
   }
 

@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use tauri::Manager;
 use tauri_plugin_shell::process::CommandEvent;
@@ -19,6 +19,7 @@ struct BackendState {
     health_timeout_secs: u64,
     restart_backoff_max_secs: u64,
     restart_max: u64,
+    shutdown_grace_secs: u64,
 }
 
 impl BackendState {
@@ -31,6 +32,7 @@ impl BackendState {
         health_timeout_secs: u64,
         restart_backoff_max_secs: u64,
         restart_max: u64,
+        shutdown_grace_secs: u64,
     ) -> Self {
         Self {
             child: Mutex::new(None),
@@ -43,6 +45,7 @@ impl BackendState {
             health_timeout_secs,
             restart_backoff_max_secs,
             restart_max,
+            shutdown_grace_secs,
         }
     }
 }
@@ -87,7 +90,9 @@ fn try_graceful_shutdown(token: &str, port: u16) {
             "POST /internal/shutdown HTTP/1.1\r\nHost: 127.0.0.1\r\nx-shutdown-token: {}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
             token
         );
-        let _ = stream.write_all(request.as_bytes());
+        if let Err(err) = stream.write_all(request.as_bytes()) {
+            log::warn!("Failed to send shutdown request: {}", err);
+        }
     }
 }
 
@@ -107,16 +112,12 @@ fn check_health(port: u16) -> bool {
 }
 
 async fn wait_for_health(port: u16, timeout_secs: u64) -> bool {
-    let start = SystemTime::now();
+    let start = Instant::now();
     loop {
         if check_health(port) {
             return true;
         }
-        if start
-            .elapsed()
-            .map(|d| d.as_secs() >= timeout_secs)
-            .unwrap_or(true)
-        {
+        if start.elapsed().as_secs() >= timeout_secs {
             return false;
         }
         tauri::async_runtime::sleep(Duration::from_millis(300)).await;
@@ -128,6 +129,22 @@ fn read_env_u64(key: &str, default_value: u64) -> u64 {
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(default_value)
+}
+
+async fn backoff_or_stop(
+    restarts: &mut u64,
+    backoff: &mut u64,
+    max_restarts: u64,
+    max_backoff: u64,
+) -> bool {
+    *restarts += 1;
+    if *restarts > max_restarts {
+        log::error!("Backend restart limit reached. Stopping watchdog.");
+        return false;
+    }
+    tauri::async_runtime::sleep(Duration::from_secs(*backoff)).await;
+    *backoff = std::cmp::min(*backoff * 2, max_backoff);
+    true
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -154,6 +171,7 @@ pub fn run() {
             let health_timeout_secs = read_env_u64("BACKEND_HEALTH_TIMEOUT_SECS", 10);
             let restart_backoff_max_secs = read_env_u64("BACKEND_RESTART_BACKOFF_MAX_SECS", 30);
             let restart_max = read_env_u64("BACKEND_RESTART_MAX", 5);
+            let shutdown_grace_secs = read_env_u64("BACKEND_SHUTDOWN_GRACE_SECS", 2);
 
             log::info!("Database path: {}", db_path_str);
 
@@ -166,6 +184,7 @@ pub fn run() {
                 health_timeout_secs,
                 restart_backoff_max_secs,
                 restart_max,
+                shutdown_grace_secs,
             );
             app.manage(state);
 
@@ -191,14 +210,16 @@ pub fn run() {
                                 let _ = child.kill();
                             }
                         }
-                        restarts += 1;
-                        if restarts > state.restart_max {
-                            log::error!("Backend restart limit reached. Stopping watchdog.");
+                        if !backoff_or_stop(
+                            &mut restarts,
+                            &mut backoff,
+                            state.restart_max,
+                            state.restart_backoff_max_secs,
+                        )
+                        .await
+                        {
                             break;
                         }
-                        tauri::async_runtime::sleep(Duration::from_secs(backoff)).await;
-                        backoff =
-                            std::cmp::min(backoff * 2, state.restart_backoff_max_secs);
                         continue;
                     }
 
@@ -222,13 +243,16 @@ pub fn run() {
                     }
 
                     log::warn!("Backend stopped. Restarting in {}s...", backoff);
-                    restarts += 1;
-                    if restarts > state.restart_max {
-                        log::error!("Backend restart limit reached. Stopping watchdog.");
+                    if !backoff_or_stop(
+                        &mut restarts,
+                        &mut backoff,
+                        state.restart_max,
+                        state.restart_backoff_max_secs,
+                    )
+                    .await
+                    {
                         break;
                     }
-                    tauri::async_runtime::sleep(Duration::from_secs(backoff)).await;
-                    backoff = std::cmp::min(backoff * 2, state.restart_backoff_max_secs);
                 }
             });
 
@@ -249,7 +273,10 @@ pub fn run() {
                     state.shutting_down.store(true, Ordering::SeqCst);
 
                     try_graceful_shutdown(&state.shutdown_token, state.port);
-                    tauri::async_runtime::sleep(Duration::from_secs(2)).await;
+                    tauri::async_runtime::sleep(Duration::from_secs(
+                        state.shutdown_grace_secs,
+                    ))
+                    .await;
 
                     if let Ok(mut guard) = state.child.lock() {
                         if let Some(mut child) = guard.take() {
