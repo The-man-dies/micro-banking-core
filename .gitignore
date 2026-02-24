@@ -30,3 +30,8 @@ server/*.db
 server/*.exe
 # prisma generated client
 server/src/generated/
+
+# local/generated build artifacts and notes
+desktop/resources/
+point.md
+PR.md
