@@ -9,11 +9,14 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
 struct BackendState {
-    child: Mutex<Option<tauri_plugin_shell::process::Child>>,
+    child: Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
     db_path: String,
     log_dir: String,
     shutdown_token: String,
     tauri_env_path: Option<String>,
+    prisma_schema_path: Option<String>,
+    prisma_migrations_path: Option<String>,
+    prisma_wasm_path: Option<String>,
     port: u16,
     shutting_down: AtomicBool,
     health_timeout_secs: u64,
@@ -28,6 +31,9 @@ impl BackendState {
         log_dir: String,
         shutdown_token: String,
         tauri_env_path: Option<String>,
+        prisma_schema_path: Option<String>,
+        prisma_migrations_path: Option<String>,
+        prisma_wasm_path: Option<String>,
         port: u16,
         health_timeout_secs: u64,
         restart_backoff_max_secs: u64,
@@ -40,6 +46,9 @@ impl BackendState {
             log_dir,
             shutdown_token,
             tauri_env_path,
+            prisma_schema_path,
+            prisma_migrations_path,
+            prisma_wasm_path,
             port,
             shutting_down: AtomicBool::new(false),
             health_timeout_secs,
@@ -61,10 +70,10 @@ fn generate_shutdown_token() -> String {
 fn spawn_backend(
     app: &tauri::AppHandle,
     state: &BackendState,
-) -> Option<tauri_plugin_shell::process::Receiver> {
+) -> Option<tauri::async_runtime::Receiver<tauri_plugin_shell::process::CommandEvent>> {
     let sidecar_command = app
         .shell()
-        .sidecar("app")
+        .sidecar("server")
         .ok()?
         .env("DATABASE_FILE", &state.db_path)
         .env("LOG_DIR", &state.log_dir)
@@ -73,6 +82,24 @@ fn spawn_backend(
 
     let sidecar_command = if let Some(env_path) = &state.tauri_env_path {
         sidecar_command.env("TAURI_ENV_PATH", env_path)
+    } else {
+        sidecar_command
+    };
+
+    let sidecar_command = if let Some(schema_path) = &state.prisma_schema_path {
+        sidecar_command.env("PRISMA_SCHEMA_PATH", schema_path)
+    } else {
+        sidecar_command
+    };
+
+    let sidecar_command = if let Some(migrations_path) = &state.prisma_migrations_path {
+        sidecar_command.env("PRISMA_MIGRATIONS_PATH", migrations_path)
+    } else {
+        sidecar_command
+    };
+
+    let sidecar_command = if let Some(wasm_path) = &state.prisma_wasm_path {
+        sidecar_command.env("PRISMA_QUERY_ENGINE_WASM_PATH", wasm_path)
     } else {
         sidecar_command
     };
@@ -120,7 +147,7 @@ async fn wait_for_health(port: u16, timeout_secs: u64) -> bool {
         if start.elapsed().as_secs() >= timeout_secs {
             return false;
         }
-        tauri::async_runtime::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(300)).await;
     }
 }
 
@@ -142,7 +169,7 @@ async fn backoff_or_stop(
         log::error!("Backend restart limit reached. Stopping watchdog.");
         return false;
     }
-    tauri::async_runtime::sleep(Duration::from_secs(*backoff)).await;
+    tokio::time::sleep(Duration::from_secs(*backoff)).await;
     *backoff = std::cmp::min(*backoff * 2, max_backoff);
     true
 }
@@ -167,6 +194,18 @@ pub fn run() {
                 .resource_dir()
                 .ok()
                 .map(|dir| dir.join(".env").to_string_lossy().to_string());
+            let resource_dir = app.path().resource_dir().ok();
+            let prisma_schema_path = resource_dir
+                .as_ref()
+                .map(|dir| dir.join("schema.prisma").to_string_lossy().to_string());
+            let prisma_migrations_path = resource_dir
+                .as_ref()
+                .map(|dir| dir.join("migrations").to_string_lossy().to_string());
+            let prisma_wasm_path = resource_dir.as_ref().map(|dir| {
+                dir.join("query_compiler_fast_bg.wasm")
+                    .to_string_lossy()
+                    .to_string()
+            });
             let port = 3000;
             let health_timeout_secs = read_env_u64("BACKEND_HEALTH_TIMEOUT_SECS", 10);
             let restart_backoff_max_secs = read_env_u64("BACKEND_RESTART_BACKOFF_MAX_SECS", 30);
@@ -180,6 +219,9 @@ pub fn run() {
                 log_dir_str,
                 shutdown_token,
                 tauri_env_path,
+                prisma_schema_path,
+                prisma_migrations_path,
+                prisma_wasm_path,
                 port,
                 health_timeout_secs,
                 restart_backoff_max_secs,
@@ -199,14 +241,14 @@ pub fn run() {
                     }
 
                     let Some(mut rx) = spawn_backend(&app_handle, &state) else {
-                        tauri::async_runtime::sleep(Duration::from_secs(2)).await;
+                    tokio::time::sleep(Duration::from_secs(2)).await;
                         continue;
                     };
 
                     if !wait_for_health(state.port, state.health_timeout_secs).await {
                         log::error!("Backend failed health check. Restarting...");
                         if let Ok(mut guard) = state.child.lock() {
-                            if let Some(mut child) = guard.take() {
+                            if let Some(child) = guard.take() {
                                 let _ = child.kill();
                             }
                         }
@@ -269,20 +311,23 @@ pub fn run() {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 let app_handle = window.app_handle().clone();
                 tauri::async_runtime::spawn(async move {
-                    let state = app_handle.state::<BackendState>();
-                    state.shutting_down.store(true, Ordering::SeqCst);
+                    {
+                        let state = app_handle.state::<BackendState>();
+                        state.shutting_down.store(true, Ordering::SeqCst);
+                        try_graceful_shutdown(&state.shutdown_token, state.port);
+                        tokio::time::sleep(Duration::from_secs(
+                            state.shutdown_grace_secs,
+                        ))
+                        .await;
+                    }
 
-                    try_graceful_shutdown(&state.shutdown_token, state.port);
-                    tauri::async_runtime::sleep(Duration::from_secs(
-                        state.shutdown_grace_secs,
-                    ))
-                    .await;
-
-                    if let Ok(mut guard) = state.child.lock() {
-                        if let Some(mut child) = guard.take() {
+                    if let Ok(mut guard) =
+                        app_handle.state::<BackendState>().child.lock()
+                    {
+                        if let Some(child) = guard.take() {
                             let _ = child.kill();
                         }
-                    }
+                    };
                 });
             }
         })
