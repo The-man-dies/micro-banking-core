@@ -1,5 +1,6 @@
 import logger from "../config/logger";
 import prisma from "./prisma";
+import { runMigrationsIfNeeded } from "./migrationRunner";
 
 class DatabaseService {
   private static instance: DatabaseService;
@@ -22,6 +23,7 @@ class DatabaseService {
    */
   public async initializeDatabase(): Promise<void> {
     try {
+      await runMigrationsIfNeeded();
       logger.info("Initializing database connection via Prisma...");
       await prisma.$connect();
       logger.info("Database connection established.");

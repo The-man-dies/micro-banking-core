@@ -6,6 +6,17 @@ if (tauriEnvPath) {
   dotenv.config();
 }
 
+const prismaSchemaPath = process.env.PRISMA_SCHEMA_PATH;
+if (prismaSchemaPath) {
+  process.env.PRISMA_SCHEMA_PATH = prismaSchemaPath;
+}
+const prismaWasmPath = process.env.PRISMA_QUERY_ENGINE_WASM_PATH;
+if (prismaSchemaPath || prismaWasmPath) {
+  logger.info(
+    `Prisma paths: schema=${prismaSchemaPath || "default"} wasm=${prismaWasmPath || "default"}`,
+  );
+}
+
 import app from "./app";
 import { databaseService } from "./services/database";
 import logger from "./config/logger";
