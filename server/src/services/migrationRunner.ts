@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import Database from "bun:sqlite";
+import { Database } from "bun:sqlite";
 import logger from "../config/logger";
 
 const resolveDbPath = (): string => {

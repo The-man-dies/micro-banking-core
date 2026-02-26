@@ -1,18 +1,12 @@
 generator client {
-  provider      = "prisma-client"
-  output        = "../src/generated/client"
+  provider      = "prisma-client-js"
+  engineType    = "library"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "sqlite"
-}
-
-enum TransactionType {
-  FraisInscription
-  FraisReactivation
-  Depot
-  Retrait
-  Expiration
+  url      = env("DATABASE_URL")
 }
 
 model Admin {
@@ -65,13 +59,13 @@ model Ticket {
 }
 
 model Transaction {
-  id          Int             @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   clientId    Int
-  client      Client          @relation(fields: [clientId], references: [id])
+  client      Client  @relation(fields: [clientId], references: [id])
   amount      Float
-  type        TransactionType
+  type        String
   description String?
-  createdAt   DateTime        @default(now())
+  createdAt   DateTime @default(now())
   fiscalYear  Int
 }
 

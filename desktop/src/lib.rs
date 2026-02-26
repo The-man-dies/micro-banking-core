@@ -71,14 +71,23 @@ fn spawn_backend(
     app: &tauri::AppHandle,
     state: &BackendState,
 ) -> Option<tauri::async_runtime::Receiver<tauri_plugin_shell::process::CommandEvent>> {
-    let sidecar_command = app
-        .shell()
-        .sidecar("server")
-        .ok()?
-        .env("DATABASE_FILE", &state.db_path)
-        .env("LOG_DIR", &state.log_dir)
-        .env("SHUTDOWN_TOKEN", &state.shutdown_token)
-        .env("PORT", &state.port.to_string());
+    log::info!(
+        "Starting backend sidecar (port={}, db_path={})",
+        state.port,
+        state.db_path
+    );
+    let sidecar_command = match app.shell().sidecar("server") {
+        Ok(cmd) => cmd,
+        Err(err) => {
+            log::error!("Failed to resolve sidecar 'server': {}", err);
+            return None;
+        }
+    }
+    .env("DATABASE_FILE", &state.db_path)
+    .env("DATABASE_URL", format!("file:{}", state.db_path))
+    .env("LOG_DIR", &state.log_dir)
+    .env("SHUTDOWN_TOKEN", &state.shutdown_token)
+    .env("PORT", &state.port.to_string());
 
     let sidecar_command = if let Some(env_path) = &state.tauri_env_path {
         sidecar_command.env("TAURI_ENV_PATH", env_path)
@@ -104,7 +113,13 @@ fn spawn_backend(
         sidecar_command
     };
 
-    let (rx, child) = sidecar_command.spawn().ok()?;
+    let (rx, child) = match sidecar_command.spawn() {
+        Ok(value) => value,
+        Err(err) => {
+            log::error!("Failed to spawn sidecar 'server': {}", err);
+            return None;
+        }
+    };
     if let Ok(mut guard) = state.child.lock() {
         *guard = Some(child);
     }
@@ -189,25 +204,34 @@ pub fn run() {
             let log_dir = data_dir.join("logs");
             let log_dir_str = log_dir.to_string_lossy().to_string();
             let shutdown_token = generate_shutdown_token();
-            let tauri_env_path = app
-                .path()
-                .resource_dir()
-                .ok()
-                .map(|dir| dir.join(".env").to_string_lossy().to_string());
             let resource_dir = app.path().resource_dir().ok();
+            let tauri_env_path = resource_dir.as_ref().map(|dir| {
+                dir.join("_up_")
+                    .join("server")
+                    .join(".env")
+                    .to_string_lossy()
+                    .to_string()
+            });
             let prisma_schema_path = resource_dir
                 .as_ref()
                 .map(|dir| dir.join("schema.prisma").to_string_lossy().to_string());
             let prisma_migrations_path = resource_dir
                 .as_ref()
-                .map(|dir| dir.join("migrations").to_string_lossy().to_string());
+                .map(|dir| {
+                    dir.join("_up_")
+                        .join("server")
+                        .join("prisma")
+                        .join("migrations")
+                        .to_string_lossy()
+                        .to_string()
+                });
             let prisma_wasm_path = resource_dir.as_ref().map(|dir| {
                 dir.join("query_compiler_fast_bg.wasm")
                     .to_string_lossy()
                     .to_string()
             });
-            let port = 3000;
-            let health_timeout_secs = read_env_u64("BACKEND_HEALTH_TIMEOUT_SECS", 10);
+            let port = read_env_u64("PORT", 3000) as u16;
+            let health_timeout_secs = read_env_u64("BACKEND_HEALTH_TIMEOUT_SECS", 30);
             let restart_backoff_max_secs = read_env_u64("BACKEND_RESTART_BACKOFF_MAX_SECS", 30);
             let restart_max = read_env_u64("BACKEND_RESTART_MAX", 5);
             let shutdown_grace_secs = read_env_u64("BACKEND_SHUTDOWN_GRACE_SECS", 2);
@@ -241,9 +265,25 @@ pub fn run() {
                     }
 
                     let Some(mut rx) = spawn_backend(&app_handle, &state) else {
-                    tokio::time::sleep(Duration::from_secs(2)).await;
+                        tokio::time::sleep(Duration::from_secs(2)).await;
                         continue;
                     };
+
+                    let log_task = tauri::async_runtime::spawn(async move {
+                        while let Some(event) = rx.recv().await {
+                            if let CommandEvent::Stdout(line) = event {
+                                log::info!(
+                                    "Backend stdout: {}",
+                                    String::from_utf8_lossy(&line)
+                                );
+                            } else if let CommandEvent::Stderr(line) = event {
+                                log::error!(
+                                    "Backend stderr: {}",
+                                    String::from_utf8_lossy(&line)
+                                );
+                            }
+                        }
+                    });
 
                     if !wait_for_health(state.port, state.health_timeout_secs).await {
                         log::error!("Backend failed health check. Restarting...");
@@ -252,6 +292,7 @@ pub fn run() {
                                 let _ = child.kill();
                             }
                         }
+                        let _ = log_task.await;
                         if !backoff_or_stop(
                             &mut restarts,
                             &mut backoff,
@@ -268,13 +309,7 @@ pub fn run() {
                     backoff = 1;
                     restarts = 0;
 
-                    while let Some(event) = rx.recv().await {
-                        if let CommandEvent::Stdout(line) = event {
-                            log::info!("Backend stdout: {}", String::from_utf8_lossy(&line));
-                        } else if let CommandEvent::Stderr(line) = event {
-                            log::error!("Backend stderr: {}", String::from_utf8_lossy(&line));
-                        }
-                    }
+                    let _ = log_task.await;
 
                     if let Ok(mut guard) = state.child.lock() {
                         *guard = None;
@@ -298,13 +333,11 @@ pub fn run() {
                 }
             });
 
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log::LevelFilter::Info)
+                    .build(),
+            )?;
             Ok(())
         })
         .on_window_event(|window, event| {

@@ -4,7 +4,7 @@ import logger from "../config/logger";
 import { AuthRequest } from "../types/express.d";
 import Agent from "../models/Agent";
 import { AgentDto } from "../types/agent.types";
-import prisma from "../services/prisma";
+import { prisma } from "../services/prisma";
 
 export const createAgent = async (req: AuthRequest, res: Response) => {
   try {

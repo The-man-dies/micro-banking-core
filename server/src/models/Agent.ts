@@ -1,5 +1,5 @@
 import logger from "../config/logger";
-import prisma from "../services/prisma";
+import { prisma } from "../services/prisma";
 import { databaseService } from "../services/database";
 import { AgentType, AgentDto } from "../types/agent.types";
 

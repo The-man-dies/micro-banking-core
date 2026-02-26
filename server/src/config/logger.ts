@@ -2,7 +2,17 @@ import fs from "fs";
 import path from "path";
 import winston from "winston";
 
-const { combine, timestamp, printf, colorize, align } = winston.format;
+const { combine, timestamp, printf, colorize, align, errors, splat, metadata } =
+  winston.format;
+
+const buildLine = (info: winston.Logform.TransformableInfo) => {
+  const meta =
+    info.metadata && Object.keys(info.metadata).length > 0
+      ? ` ${JSON.stringify(info.metadata)}`
+      : "";
+  const stack = info.stack ? `\n${info.stack}` : "";
+  return `[${info.timestamp}] ${info.level}: ${info.message}${meta}${stack}`;
+};
 
 const consoleFormat = combine(
   colorize({ all: true }),
@@ -10,7 +20,10 @@ const consoleFormat = combine(
     format: "YYYY-MM-DD HH:mm:ss.SSS",
   }),
   align(),
-  printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`),
+  errors({ stack: true }),
+  splat(),
+  metadata({ fillExcept: ["message", "level", "timestamp", "label"] }),
+  printf(buildLine),
 );
 
 const fileFormat = combine(
@@ -18,7 +31,10 @@ const fileFormat = combine(
     format: "YYYY-MM-DD HH:mm:ss.SSS",
   }),
   align(),
-  printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`),
+  errors({ stack: true }),
+  splat(),
+  metadata({ fillExcept: ["message", "level", "timestamp", "label"] }),
+  printf(buildLine),
 );
 
 const logDir = process.env.LOG_DIR || path.join(process.cwd(), "logs");
@@ -31,7 +47,11 @@ try {
 }
 
 const transports: winston.transport[] = [
-  new winston.transports.Console({ format: consoleFormat }),
+  new winston.transports.Console({
+    format: consoleFormat,
+    handleExceptions: true,
+    handleRejections: true,
+  }),
 ];
 
 if (logFile) {
@@ -41,6 +61,8 @@ if (logFile) {
       format: fileFormat,
       maxsize: 5 * 1024 * 1024,
       maxFiles: 5,
+      handleExceptions: true,
+      handleRejections: true,
     }),
   );
 }
@@ -48,6 +70,7 @@ if (logFile) {
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || "info",
   transports,
+  exitOnError: false,
 });
 
 export default logger;

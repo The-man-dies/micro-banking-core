@@ -1,5 +1,5 @@
 import logger from "../config/logger";
-import prisma from "./prisma";
+import { prisma } from "./prisma";
 import { runMigrationsIfNeeded } from "./migrationRunner";
 
 class DatabaseService {
