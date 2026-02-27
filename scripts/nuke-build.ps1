@@ -11,7 +11,7 @@ Remove-Item -Recurse -Force "server\node_modules\@prisma\client" -ErrorAction Si
 Remove-Item -Recurse -Force "client\dist" -ErrorAction SilentlyContinue
 
 Write-Host "==> Building frontend"
-Push-Location "../client"
+Push-Location "client"
 & bun install
 & bun run build
 Pop-Location
