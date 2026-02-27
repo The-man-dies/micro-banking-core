@@ -1,4 +1,10 @@
 import dotenv from "dotenv";
+
+import app from "./app";
+import { databaseService } from "./services/database";
+import logger from "./config/logger";
+import { startExpirationService, stopExpirationService } from "./services/cron";
+
 const tauriEnvPath = process.env.TAURI_ENV_PATH;
 if (tauriEnvPath) {
   dotenv.config({ path: tauriEnvPath });
@@ -17,14 +23,31 @@ if (prismaSchemaPath || prismaWasmPath) {
   );
 }
 
-import app from "./app";
-import { databaseService } from "./services/database";
-import logger from "./config/logger";
-import { startExpirationService, stopExpirationService } from "./services/cron";
-
-const port = process.env.PORT || 3000;
+const port = Number(process.env.PORT) || 3000;
 let server: ReturnType<typeof app.listen> | null = null;
 let shuttingDown = false;
+
+logger.info("Starting server bootstrap", {
+  port,
+  cwd: process.cwd(),
+  env: {
+    LOG_DIR: process.env.LOG_DIR,
+    LOG_FILE: process.env.LOG_FILE,
+    TAURI_ENV_PATH: process.env.TAURI_ENV_PATH,
+    DATABASE_FILE: process.env.DATABASE_FILE,
+    PRISMA_SCHEMA_PATH: process.env.PRISMA_SCHEMA_PATH,
+    PRISMA_MIGRATIONS_PATH: process.env.PRISMA_MIGRATIONS_PATH,
+    PRISMA_QUERY_ENGINE_WASM_PATH: process.env.PRISMA_QUERY_ENGINE_WASM_PATH,
+  },
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught exception", { error });
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled rejection", { reason });
+});
 
 const shutdown = async (signal: string) => {
   if (shuttingDown) return;
@@ -77,6 +100,10 @@ databaseService
 
     server = app.listen(port, () => {
       logger.info(`Server is running on port ${port}`);
+    });
+    server.on("error", (error) => {
+      logger.error("Server failed to start", { error });
+      process.exit(1);
     });
   })
   .catch((error) => {

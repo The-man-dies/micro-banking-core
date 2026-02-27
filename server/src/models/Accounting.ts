@@ -1,4 +1,4 @@
-import prisma from "../services/prisma";
+import { prisma } from "../services/prisma";
 import logger from "../config/logger";
 import { TransactionType } from "../types/transaction.types";
 

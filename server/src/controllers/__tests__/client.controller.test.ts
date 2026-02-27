@@ -5,7 +5,7 @@ import {
   payoutClientAccount,
 } from "../client.controller";
 import { Request, Response } from "express";
-import prisma from "../../services/prisma";
+import { prisma } from "../../services/prisma";
 
 // Mock Express request and response
 const mockRequest = (body: any, params: any = {}): Partial<Request> => ({

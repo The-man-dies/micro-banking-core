@@ -4,7 +4,7 @@ import logger from "../config/logger";
 import { AuthRequest } from "../types/express.d";
 import Ticket from "../models/Ticket";
 import { TicketDto } from "../types/ticket.types";
-import prisma from "../services/prisma";
+import { prisma } from "../services/prisma";
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
   try {

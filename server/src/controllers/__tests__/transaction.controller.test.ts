@@ -1,4 +1,4 @@
-import prisma from "../../services/prisma";
+import { prisma } from "../../services/prisma";
 import { getAllTransactions } from "../transaction.controller";
 import { getAccountingStats } from "../accounting.controller";
 import { Request, Response } from "express";

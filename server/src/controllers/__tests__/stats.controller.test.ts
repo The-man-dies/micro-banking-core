@@ -1,4 +1,4 @@
-import prisma from "../../services/prisma";
+import { prisma } from "../../services/prisma";
 import { getDashboardStats, getTimeSeriesStats } from "../stats.controller";
 import { Request, Response } from "express";
 

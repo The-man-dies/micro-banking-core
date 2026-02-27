@@ -1,6 +1,6 @@
-import { Prisma } from "../generated/client/client";
+import { Prisma } from "@prisma/client";
 import logger from "../config/logger";
-import globalPrisma from "../services/prisma";
+import { prisma } from "../services/prisma";
 import type {
   TransactionDto,
   TransactionData,
@@ -27,7 +27,7 @@ export interface ITransactionModel {
 
 class TransactionModel implements ITransactionModel {
   private getClient(tx?: Prisma.TransactionClient) {
-    return tx || globalPrisma;
+    return tx || prisma;
   }
 
   public async create(

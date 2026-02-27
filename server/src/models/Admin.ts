@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import prisma from "../services/prisma";
+import { prisma } from "../services/prisma";
 import { databaseService } from "../services/database";
 import logger from "../config/logger";
 import { AdminDto, AdminType } from "../types/admin.types";

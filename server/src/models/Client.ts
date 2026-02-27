@@ -1,7 +1,7 @@
-import { Prisma } from "../generated/client/client";
+import { Prisma } from "@prisma/client";
 import logger from "../config/logger";
 import { databaseService } from "../services/database";
-import globalPrisma from "../services/prisma";
+import { prisma } from "../services/prisma";
 import { ClientType, ClientDto } from "../types/client.types";
 
 export interface IClientModel {
@@ -24,7 +24,7 @@ export interface IClientModel {
 
 class ClientModel implements IClientModel {
   private getClient(tx?: Prisma.TransactionClient) {
-    return tx || globalPrisma;
+    return tx || prisma;
   }
 
   public async create(

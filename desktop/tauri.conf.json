@@ -1,18 +1,18 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "micro-banking-core",
-  "version": "0.1.0",
-  "identifier": "com.microbanking.desktop",
+  "version": "0.1.2",
+  "identifier": "com.microbanking.core",
   "build": {
     "frontendDist": "../client/dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "bun dev",
-    "beforeBuildCommand": "cd client && bun run build && cd ../server && bun compile:linux"
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
   },
   "app": {
     "windows": [
       {
-        "title": "micro-banking-core",
+        "title": "Micro Banking Core",
         "width": 800,
         "height": 600,
         "resizable": true,
@@ -37,7 +37,8 @@
       "../server/.env",
       "../server/prisma/migrations",
       "resources/schema.prisma",
-      "resources/query_compiler_fast_bg.wasm"
+      "resources/query_compiler_fast_bg.wasm",
+      "resources/prisma-client"
     ],
     "externalBin": ["binaries/server"]
   }

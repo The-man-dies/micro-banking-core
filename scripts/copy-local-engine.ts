@@ -10,6 +10,7 @@ const clientDir = path.join(
 );
 
 const destDir = path.join(process.cwd(), "desktop", "resources");
+const prismaClientDest = path.join(destDir, "prisma-client");
 
 const ensureDir = async () => {
   await fs.mkdir(destDir, { recursive: true });
@@ -26,16 +27,21 @@ const main = async () => {
   const wasmDest = path.join(destDir, "query_compiler_fast_bg.wasm");
   const schemaDest = path.join(destDir, "schema.prisma");
 
-  try {
-    await ensureDir();
-    await copyIfExists(wasmSrc, wasmDest);
-    await copyIfExists(schemaSrc, schemaDest);
-  } catch {
-    throw new Error("Run 'bunx prisma generate' in server/ first");
+  await ensureDir();
+  await copyIfExists(wasmSrc, wasmDest).catch(() => {
+    console.warn("Prisma wasm asset missing; skipping copy.");
+  });
+  await copyIfExists(schemaSrc, schemaDest);
+  const clientStat = await fs.stat(clientDir).catch(() => null);
+  if (!clientStat) {
+    throw new Error("Prisma client build missing; run 'bunx prisma generate' in server/ first");
   }
+  await fs.rm(prismaClientDest, { recursive: true, force: true });
+  await fs.cp(clientDir, prismaClientDest, { recursive: true });
 
   console.log(`Copied ${wasmSrc} -> ${wasmDest}`);
   console.log(`Copied ${schemaSrc} -> ${schemaDest}`);
+  console.log(`Copied Prisma client artifacts -> ${prismaClientDest}`);
 };
 
 main().catch((error) => {
