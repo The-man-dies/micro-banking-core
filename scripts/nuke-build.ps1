@@ -16,6 +16,11 @@ Push-Location "client"
 & bun run build
 Pop-Location
 
+Write-Host "==> Preparing resource directories"
+if (!(Test-Path "desktop\resources")) {
+    New-Item -ItemType Directory -Force -Path "desktop\resources"
+}
+
 Write-Host "==> Regenerating Prisma client"
 Push-Location "server"
 & bun install
