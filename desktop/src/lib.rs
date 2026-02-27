@@ -140,7 +140,8 @@ fn try_graceful_shutdown(token: &str, port: u16) {
 
 fn check_health(port: u16) -> bool {
     if let Ok(mut stream) = TcpStream::connect(("127.0.0.1", port)) {
-        let request = "GET /internal/health HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n";
+        let request =
+            "GET /internal/health HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n";
         if stream.write_all(request.as_bytes()).is_err() {
             return false;
         }
@@ -215,16 +216,14 @@ pub fn run() {
             let prisma_schema_path = resource_dir
                 .as_ref()
                 .map(|dir| dir.join("schema.prisma").to_string_lossy().to_string());
-            let prisma_migrations_path = resource_dir
-                .as_ref()
-                .map(|dir| {
-                    dir.join("_up_")
-                        .join("server")
-                        .join("prisma")
-                        .join("migrations")
-                        .to_string_lossy()
-                        .to_string()
-                });
+            let prisma_migrations_path = resource_dir.as_ref().map(|dir| {
+                dir.join("_up_")
+                    .join("server")
+                    .join("prisma")
+                    .join("migrations")
+                    .to_string_lossy()
+                    .to_string()
+            });
             let prisma_wasm_path = resource_dir.as_ref().map(|dir| {
                 dir.join("query_compiler_fast_bg.wasm")
                     .to_string_lossy()
@@ -272,15 +271,9 @@ pub fn run() {
                     let log_task = tauri::async_runtime::spawn(async move {
                         while let Some(event) = rx.recv().await {
                             if let CommandEvent::Stdout(line) = event {
-                                log::info!(
-                                    "Backend stdout: {}",
-                                    String::from_utf8_lossy(&line)
-                                );
+                                log::info!("Backend stdout: {}", String::from_utf8_lossy(&line));
                             } else if let CommandEvent::Stderr(line) = event {
-                                log::error!(
-                                    "Backend stderr: {}",
-                                    String::from_utf8_lossy(&line)
-                                );
+                                log::error!("Backend stderr: {}", String::from_utf8_lossy(&line));
                             }
                         }
                     });
@@ -348,15 +341,10 @@ pub fn run() {
                         let state = app_handle.state::<BackendState>();
                         state.shutting_down.store(true, Ordering::SeqCst);
                         try_graceful_shutdown(&state.shutdown_token, state.port);
-                        tokio::time::sleep(Duration::from_secs(
-                            state.shutdown_grace_secs,
-                        ))
-                        .await;
+                        tokio::time::sleep(Duration::from_secs(state.shutdown_grace_secs)).await;
                     }
 
-                    if let Ok(mut guard) =
-                        app_handle.state::<BackendState>().child.lock()
-                    {
+                    if let Ok(mut guard) = app_handle.state::<BackendState>().child.lock() {
                         if let Some(child) = guard.take() {
                             let _ = child.kill();
                         }
