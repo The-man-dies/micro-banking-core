@@ -23,25 +23,17 @@ const normalizePath = (p: string | undefined): string | undefined => {
 };
 
 // Normalize important Prisma paths at the entry point to improve Windows compatibility
-if (process.env.PRISMA_SCHEMA_PATH) {
-  process.env.PRISMA_SCHEMA_PATH = normalizePath(
-    process.env.PRISMA_SCHEMA_PATH,
-  );
-}
-if (process.env.PRISMA_MIGRATIONS_PATH) {
-  process.env.PRISMA_MIGRATIONS_PATH = normalizePath(
-    process.env.PRISMA_MIGRATIONS_PATH,
-  );
-}
-if (process.env.PRISMA_QUERY_ENGINE_WASM_PATH) {
-  process.env.PRISMA_QUERY_ENGINE_WASM_PATH = normalizePath(
-    process.env.PRISMA_QUERY_ENGINE_WASM_PATH,
-  );
-}
-if (process.env.PRISMA_QUERY_ENGINE_LIBRARY) {
-  process.env.PRISMA_QUERY_ENGINE_LIBRARY = normalizePath(
-    process.env.PRISMA_QUERY_ENGINE_LIBRARY,
-  );
+const prismaEnvVarsToNormalize = [
+  "PRISMA_SCHEMA_PATH",
+  "PRISMA_MIGRATIONS_PATH",
+  "PRISMA_QUERY_ENGINE_WASM_PATH",
+  "PRISMA_QUERY_ENGINE_LIBRARY",
+];
+
+for (const envVar of prismaEnvVarsToNormalize) {
+  if (process.env[envVar]) {
+    process.env[envVar] = normalizePath(process.env[envVar]);
+  }
 }
 
 const port = Number(process.env.PORT) || 3000;
