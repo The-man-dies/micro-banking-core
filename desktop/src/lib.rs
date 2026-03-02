@@ -140,7 +140,10 @@ fn spawn_backend(
         }
 
         if path.exists() {
-            sidecar_command.env("PRISMA_QUERY_ENGINE_LIBRARY", path.to_string_lossy().to_string())
+            sidecar_command.env(
+                "PRISMA_QUERY_ENGINE_LIBRARY",
+                path.to_string_lossy().to_string(),
+            )
         } else {
             sidecar_command
         }
