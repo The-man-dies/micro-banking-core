@@ -123,7 +123,7 @@ fn spawn_backend(
         if let Ok(entries) = std::fs::read_dir(&path) {
             for entry in entries.flatten() {
                 let name = entry.file_name().to_string_lossy().to_string();
-                let lower_name = name.toLowerCase();
+                let lower_name = name.to_lowercase();
 
                 // Match binary engines (query-engine-*) or library engines (libquery_engine-*)
                 // and ignore unrelated files like schema or package.json
