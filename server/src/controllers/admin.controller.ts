@@ -1,5 +1,5 @@
 import { Response } from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { ApiResponse } from "../utils/response.handler";
 import logger from "../config/logger";

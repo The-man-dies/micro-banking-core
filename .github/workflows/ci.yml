@@ -75,6 +75,24 @@ jobs:
           workspaces: |
             desktop -> target
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install server dependencies
+        run: |
+          cd ../server
+          bun install
+
+      - name: Compile server sidecar (Linux)
+        run: |
+          cd ../server
+          bun run compile:linux
+
+      - name: Prepare sidecar resources (Prisma engine)
+        run: bun run copy:engine
+
       - name: Format (rustfmt)
         run: cargo fmt --all -- --check
 
