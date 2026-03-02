@@ -7,11 +7,11 @@ When running the application on Windows 10 production environments, the backend 
 ## Root Cause
 
 - **Path Handling**: Windows UNC (Long Path) prefixes (`\\?\`) provided by Tauri are not correctly resolved by the Prisma Engine or the `DATABASE_URL` parser.
-- **Engine Resolution**: In a bundled executable environment, the sidecar needs an explicit `PRISMA_QUERY_ENGINE_LIBRARY` path to find the native library engine.
-- **Linux Fragility**: Pre-merging, the Linux engine selection was hardcoded to a single OpenSSL variant, which could cause failures on varied Linux environments.
+- **Engine Resolution**: In a bundled executable environment, the sidecar needs an explicit `PRISMA_QUERY_ENGINE_*` path to find the native library or binary engine.
 
 ## Proposed Fix
 
-- Implement `normalizePath` in the server entry point to strip `\\?\` prefixes for all `PRISMA_*` variables.
-- Robustly normalize `DATABASE_URL` (strip UNC, fix backslashes) even if already set in environment.
-- Explicitly configure the sidecar launcher to pass the correct native engine path, with a scanning mechanism on Linux to detect the correct engine variant.
+- Upgrade to **Prisma 6.x** for better engine management and configuration standards.
+- Switch Prisma to `engineType = "binary"` in `schema.prisma`.
+- Move datasource configuration to `prisma.config.ts` to resolve deprecation lints and centralize connection logic.
+- Implement robust path normalization in the server and dynamic engine scanning in the sidecar to set both `PRISMA_QUERY_ENGINE_LIBRARY` and `PRISMA_QUERY_ENGINE_BINARY`.

@@ -2,19 +2,21 @@
 
 ## Description
 
-This PR resolves the `PrismaClientInitializationError` encountered on Windows 10 production environments by improving path normalization and engine resolution.
+This PR resolves the `PrismaClientInitializationError` encountered on Windows 10 production environments by switching to the `binary` engine type and improving path normalization and discovery.
 
 ## Key Changes
 
-- **Universal Path Normalization**: Stripping `\\?\` UNC prefixes at the server entry point for all `PRISMA_*` environment variables.
-- **Improved DATABASE_URL Handling**: Normalizing `DATABASE_URL` (fixing backslashes and stripping UNC) even when pre-set by the environment, ensuring robust SQLite connectivity.
-- **Code Refactoring**: Cleaned up the environment variable normalization logic in `server/src/index.ts` using a maintainable loop, as suggested by code review.
-- **Robust Engine Resolution**:
-  - Explicitly passing `PRISMA_QUERY_ENGINE_LIBRARY` via the sidecar launcher in `desktop/src/lib.rs`.
-  - **Linux Engine Scanning**: Automatically detects the correct `.so.node` engine variant instead of hardcoding a specific OpenSSL version.
-- **Improved Diagnostics**: Adding detailed stack traces for initialization errors in production logs.
+- **Universal Path Normalization**: Stripping `\\?\` UNC prefixes at the server entry point for all `PRISMA_*` variables.
+- **Improved DATABASE_URL & Config**:
+  - Upgraded to **Prisma 6.x**.
+  - Moved datasource configuration to `prisma.config.ts` to resolve deprecation lints.
+  - Normalizing `DATABASE_URL` even when pre-set by the environment.
+- **Robust Engine Discovery & Configuration**:
+  - Switched Prisma to `engineType = "binary"` for better reliability in bundled environments.
+  - Implemented an automatic scanning mechanism in `desktop/src/lib.rs` that detects both binary and library engine variants.
+- **Diagnostics**: Detailed stack traces for initialization errors in production logs.
 
 ## Verification
 
 - Verified on Windows environment with UNC path prefixes.
-- Verified Linux engine variant detection logic.
+- Verified engine variant detection logic.
