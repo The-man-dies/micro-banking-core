@@ -26,6 +26,7 @@ struct BackendState {
 }
 
 impl BackendState {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         db_path: String,
         log_dir: String,
@@ -87,7 +88,7 @@ fn spawn_backend(
     .env("DATABASE_URL", format!("file:{}", state.db_path))
     .env("LOG_DIR", &state.log_dir)
     .env("SHUTDOWN_TOKEN", &state.shutdown_token)
-    .env("PORT", &state.port.to_string());
+    .env("PORT", state.port.to_string());
 
     let sidecar_command = if let Some(env_path) = &state.tauri_env_path {
         sidecar_command.env("TAURI_ENV_PATH", env_path)
