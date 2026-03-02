@@ -115,7 +115,7 @@ fn spawn_backend(
     };
 
     // Explicitly set the library engine path for bundled builds
-    let sidecar_command = if let Some(resource_dir) = app.path().resource_dir().ok() {
+    let sidecar_command = if let Ok(resource_dir) = app.path().resource_dir() {
         let mut path = resource_dir.join("prisma-client");
         #[cfg(windows)]
         {
