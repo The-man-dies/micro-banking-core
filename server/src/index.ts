@@ -28,6 +28,7 @@ const prismaEnvVarsToNormalize = [
   "PRISMA_MIGRATIONS_PATH",
   "PRISMA_QUERY_ENGINE_WASM_PATH",
   "PRISMA_QUERY_ENGINE_LIBRARY",
+  "PRISMA_QUERY_ENGINE_BINARY",
 ];
 
 for (const envVar of prismaEnvVarsToNormalize) {

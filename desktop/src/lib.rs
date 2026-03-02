@@ -114,36 +114,37 @@ fn spawn_backend(
         sidecar_command
     };
 
-    // Explicitly set the library engine path for bundled builds
+    // Explicitly set the engine path for bundled builds
     let sidecar_command = if let Ok(resource_dir) = app.path().resource_dir() {
-        let mut path = resource_dir.join("prisma-client");
-        #[cfg(windows)]
-        {
-            path.push("query_engine-windows.dll.node");
-        }
-        #[cfg(target_os = "linux")]
-        {
-            // For Linux, try to find any library that looks like a query engine
-            if let Ok(entries) = std::fs::read_dir(&path) {
-                for entry in entries.flatten() {
-                    let name = entry.file_name().to_string_lossy().to_string();
-                    if name.starts_with("libquery_engine-") && name.ends_with(".so.node") {
-                        path.push(name);
-                        break;
-                    }
+        let path = resource_dir.join("prisma-client");
+        let mut found_engine = None;
+
+        // Try to find any file that looks like a Prisma engine (binary or library)
+        if let Ok(entries) = std::fs::read_dir(&path) {
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                let lower_name = name.to_lowercase();
+
+                // Match binary engines (query-engine-*) or library engines (libquery_engine-*)
+                // and ignore unrelated files like schema or package.json
+                if (lower_name.starts_with("query-engine-")
+                    || lower_name.starts_with("query_engine-")
+                    || lower_name.starts_with("libquery_engine-"))
+                    && !lower_name.ends_with(".d.ts")
+                    && !lower_name.ends_with(".js")
+                {
+                    found_engine = Some(path.join(name));
+                    break;
                 }
             }
         }
-        #[cfg(target_os = "macos")]
-        {
-            path.push("libquery_engine-darwin-arm64.dylib.node");
-        }
 
-        if path.exists() {
-            sidecar_command.env(
-                "PRISMA_QUERY_ENGINE_LIBRARY",
-                path.to_string_lossy().to_string(),
-            )
+        if let Some(engine_path) = found_engine {
+            let engine_path_str = engine_path.to_string_lossy().to_string();
+            // Set BOTH variables to be absolutely sure Prisma finds it
+            sidecar_command
+                .env("PRISMA_QUERY_ENGINE_LIBRARY", &engine_path_str)
+                .env("PRISMA_QUERY_ENGINE_BINARY", &engine_path_str)
         } else {
             sidecar_command
         }
