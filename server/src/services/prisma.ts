@@ -1,7 +1,28 @@
 import { PrismaClient } from "@prisma/client";
 
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = "file:./micro_banking.db";
-}
+const getDatabaseUrl = () => {
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
 
-export const prisma = new PrismaClient();
+  const databaseFile = process.env.DATABASE_FILE;
+  if (databaseFile) {
+    // Normalize path for Windows: use forward slashes and ensure no UNC prefix for the URL itself
+    let normalizedPath = databaseFile.replace(/\\/g, "/");
+    if (normalizedPath.startsWith("//?/")) {
+      normalizedPath = normalizedPath.slice(4);
+    }
+    return `file:${normalizedPath}`;
+  }
+
+  return "file:./micro_banking.db";
+};
+
+export const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: getDatabaseUrl(),
+    },
+  },
+  log: ["error", "warn"],
+});

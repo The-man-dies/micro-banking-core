@@ -12,14 +12,35 @@ if (tauriEnvPath) {
   dotenv.config();
 }
 
-const prismaSchemaPath = process.env.PRISMA_SCHEMA_PATH;
-if (prismaSchemaPath) {
-  process.env.PRISMA_SCHEMA_PATH = prismaSchemaPath;
+const normalizePath = (p: string | undefined): string | undefined => {
+  if (!p) return p;
+  // Remove Windows UNC long path prefix if present (\\?\)
+  let normalized = p;
+  if (normalized.startsWith("\\\\?\\")) {
+    normalized = normalized.slice(4);
+  }
+  return normalized;
+};
+
+// Normalize important Prisma paths at the entry point to improve Windows compatibility
+if (process.env.PRISMA_SCHEMA_PATH) {
+  process.env.PRISMA_SCHEMA_PATH = normalizePath(
+    process.env.PRISMA_SCHEMA_PATH,
+  );
 }
-const prismaWasmPath = process.env.PRISMA_QUERY_ENGINE_WASM_PATH;
-if (prismaSchemaPath || prismaWasmPath) {
-  logger.info(
-    `Prisma paths: schema=${prismaSchemaPath || "default"} wasm=${prismaWasmPath || "default"}`,
+if (process.env.PRISMA_MIGRATIONS_PATH) {
+  process.env.PRISMA_MIGRATIONS_PATH = normalizePath(
+    process.env.PRISMA_MIGRATIONS_PATH,
+  );
+}
+if (process.env.PRISMA_QUERY_ENGINE_WASM_PATH) {
+  process.env.PRISMA_QUERY_ENGINE_WASM_PATH = normalizePath(
+    process.env.PRISMA_QUERY_ENGINE_WASM_PATH,
+  );
+}
+if (process.env.PRISMA_QUERY_ENGINE_LIBRARY) {
+  process.env.PRISMA_QUERY_ENGINE_LIBRARY = normalizePath(
+    process.env.PRISMA_QUERY_ENGINE_LIBRARY,
   );
 }
 
@@ -32,12 +53,12 @@ logger.info("Starting server bootstrap", {
   cwd: process.cwd(),
   env: {
     LOG_DIR: process.env.LOG_DIR,
-    LOG_FILE: process.env.LOG_FILE,
     TAURI_ENV_PATH: process.env.TAURI_ENV_PATH,
     DATABASE_FILE: process.env.DATABASE_FILE,
     PRISMA_SCHEMA_PATH: process.env.PRISMA_SCHEMA_PATH,
     PRISMA_MIGRATIONS_PATH: process.env.PRISMA_MIGRATIONS_PATH,
     PRISMA_QUERY_ENGINE_WASM_PATH: process.env.PRISMA_QUERY_ENGINE_WASM_PATH,
+    PRISMA_QUERY_ENGINE_LIBRARY: process.env.PRISMA_QUERY_ENGINE_LIBRARY,
   },
 });
 
@@ -101,12 +122,22 @@ databaseService
     server = app.listen(port, () => {
       logger.info(`Server is running on port ${port}`);
     });
-    server.on("error", (error) => {
+    server.on("error", (error: any) => {
       logger.error("Server failed to start", { error });
       process.exit(1);
     });
   })
-  .catch((error) => {
-    logger.error("Failed to initialize server:", { error });
+  .catch((error: any) => {
+    // Improved error logging for production diagnostics
+    const errorDetails =
+      error instanceof Error
+        ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+            code: (error as any).code,
+          }
+        : error;
+    logger.error("Failed to initialize server:", { error: errorDetails });
     process.exit(1);
   });
