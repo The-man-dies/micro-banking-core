@@ -116,7 +116,7 @@ fn spawn_backend(
 
     // Explicitly set the engine path for bundled builds
     let sidecar_command = if let Ok(resource_dir) = app.path().resource_dir() {
-        let mut path = resource_dir.join("prisma-client");
+        let path = resource_dir.join("prisma-client");
         let mut found_engine = None;
 
         // Try to find any file that looks like a Prisma engine (binary or library)
