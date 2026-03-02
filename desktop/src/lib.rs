@@ -114,6 +114,43 @@ fn spawn_backend(
         sidecar_command
     };
 
+    // Explicitly set the library engine path for bundled builds
+    let sidecar_command = if let Ok(resource_dir) = app.path().resource_dir() {
+        let mut path = resource_dir.join("prisma-client");
+        #[cfg(windows)]
+        {
+            path.push("query_engine-windows.dll.node");
+        }
+        #[cfg(target_os = "linux")]
+        {
+            // For Linux, try to find any library that looks like a query engine
+            if let Ok(entries) = std::fs::read_dir(&path) {
+                for entry in entries.flatten() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if name.starts_with("libquery_engine-") && name.ends_with(".so.node") {
+                        path.push(name);
+                        break;
+                    }
+                }
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            path.push("libquery_engine-darwin-arm64.dylib.node");
+        }
+
+        if path.exists() {
+            sidecar_command.env(
+                "PRISMA_QUERY_ENGINE_LIBRARY",
+                path.to_string_lossy().to_string(),
+            )
+        } else {
+            sidecar_command
+        }
+    } else {
+        sidecar_command
+    };
+
     let (rx, child) = match sidecar_command.spawn() {
         Ok(value) => value,
         Err(err) => {
