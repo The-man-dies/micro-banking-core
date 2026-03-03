@@ -34,10 +34,8 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "../server/.env",
-      "../server/prisma/migrations",
-      "resources/*"
+      "resources/server"
     ],
-    "externalBin": ["binaries/server"]
+    "externalBin": ["binaries/bun"]
   }
 }

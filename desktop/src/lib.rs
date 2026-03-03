@@ -77,18 +77,25 @@ fn spawn_backend(
         state.port,
         state.db_path
     );
-    let sidecar_command = match app.shell().sidecar("server") {
+    let sidecar_command = match app.shell().sidecar("bun") {
         Ok(cmd) => cmd,
         Err(err) => {
-            log::error!("Failed to resolve sidecar 'server': {}", err);
+            log::error!("Failed to resolve sidecar 'bun': {}", err);
             return None;
         }
     }
+    .arg("dist/index.js")
     .env("DATABASE_FILE", &state.db_path)
     .env("DATABASE_URL", format!("file:{}", state.db_path))
     .env("LOG_DIR", &state.log_dir)
     .env("SHUTDOWN_TOKEN", &state.shutdown_token)
     .env("PORT", state.port.to_string());
+
+    let sidecar_command = if let Ok(resource_dir) = app.path().resource_dir() {
+        sidecar_command.current_dir(resource_dir.join("server"))
+    } else {
+        sidecar_command
+    };
 
     let sidecar_command = if let Some(env_path) = &state.tauri_env_path {
         sidecar_command.env("TAURI_ENV_PATH", env_path)
@@ -114,48 +121,10 @@ fn spawn_backend(
         sidecar_command
     };
 
-    // Explicitly set the engine path for bundled builds
-    let sidecar_command = if let Ok(resource_dir) = app.path().resource_dir() {
-        let path = resource_dir.join("prisma-client");
-        let mut found_engine = None;
-
-        // Try to find any file that looks like a Prisma engine (binary or library)
-        if let Ok(entries) = std::fs::read_dir(&path) {
-            for entry in entries.flatten() {
-                let name = entry.file_name().to_string_lossy().to_string();
-                let lower_name = name.to_lowercase();
-
-                // Match binary engines (query-engine-*) or library engines (libquery_engine-*)
-                // and ignore unrelated files like schema or package.json
-                if (lower_name.starts_with("query-engine-")
-                    || lower_name.starts_with("query_engine-")
-                    || lower_name.starts_with("libquery_engine-"))
-                    && !lower_name.ends_with(".d.ts")
-                    && !lower_name.ends_with(".js")
-                {
-                    found_engine = Some(path.join(name));
-                    break;
-                }
-            }
-        }
-
-        if let Some(engine_path) = found_engine {
-            let engine_path_str = engine_path.to_string_lossy().to_string();
-            // Set BOTH variables to be absolutely sure Prisma finds it
-            sidecar_command
-                .env("PRISMA_QUERY_ENGINE_LIBRARY", &engine_path_str)
-                .env("PRISMA_QUERY_ENGINE_BINARY", &engine_path_str)
-        } else {
-            sidecar_command
-        }
-    } else {
-        sidecar_command
-    };
-
     let (rx, child) = match sidecar_command.spawn() {
         Ok(value) => value,
         Err(err) => {
-            log::error!("Failed to spawn sidecar 'server': {}", err);
+            log::error!("Failed to spawn sidecar 'bun': {}", err);
             return None;
         }
     };
@@ -246,25 +215,35 @@ pub fn run() {
             let shutdown_token = generate_shutdown_token();
             let resource_dir = app.path().resource_dir().ok();
             let tauri_env_path = resource_dir.as_ref().map(|dir| {
-                dir.join("_up_")
-                    .join("server")
+                dir.join("server")
                     .join(".env")
                     .to_string_lossy()
                     .to_string()
             });
             let prisma_schema_path = resource_dir
                 .as_ref()
-                .map(|dir| dir.join("schema.prisma").to_string_lossy().to_string());
+                .map(|dir| {
+                    dir.join("server")
+                        .join("node_modules")
+                        .join(".prisma")
+                        .join("client")
+                        .join("schema.prisma")
+                        .to_string_lossy()
+                        .to_string()
+                });
             let prisma_migrations_path = resource_dir.as_ref().map(|dir| {
-                dir.join("_up_")
-                    .join("server")
+                dir.join("server")
                     .join("prisma")
                     .join("migrations")
                     .to_string_lossy()
                     .to_string()
             });
             let prisma_wasm_path = resource_dir.as_ref().map(|dir| {
-                dir.join("query_compiler_fast_bg.wasm")
+                dir.join("server")
+                    .join("node_modules")
+                    .join(".prisma")
+                    .join("client")
+                    .join("query_compiler_fast_bg.wasm")
                     .to_string_lossy()
                     .to_string()
             });

@@ -52,8 +52,8 @@ fi
 
 echo "==> Cleaning build artifacts"
 rm -rf desktop/target
-rm -f desktop/binaries/server-*
-rm -rf server/node_modules/.prisma server/node_modules/@prisma/client
+rm -f desktop/binaries/bun-*
+rm -rf desktop/resources/server
 rm -rf client/dist
 
 echo "==> Building frontend"
@@ -67,13 +67,32 @@ echo "==> Preparing Prisma"
 (
   cd server
   bun install
-  bunx prisma generate
+  bun run build
 )
-echo "==> Copying Prisma client assets"
-bun run copy:engine
 
-echo "==> Compiling sidecar"
-( cd server && bun run compile:linux )
+echo "==> Staging backend runtime resources"
+mkdir -p desktop/resources/server/prisma
+cp -R server/dist desktop/resources/server/dist
+cp -R server/node_modules desktop/resources/server/node_modules
+if [ -f server/.env ]; then
+  cp server/.env desktop/resources/server/.env
+fi
+cp -R server/prisma/migrations desktop/resources/server/prisma/migrations
+
+echo "==> Copying Bun sidecar binary"
+mkdir -p desktop/binaries
+BUN_BIN="$(command -v bun)"
+ARCH="$(uname -m)"
+if [ "$ARCH" = "x86_64" ]; then
+  SIDE_ARCH="x86_64"
+elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+  SIDE_ARCH="aarch64"
+else
+  echo "Unsupported Linux architecture: $ARCH" >&2
+  exit 1
+fi
+cp "$BUN_BIN" "desktop/binaries/bun-${SIDE_ARCH}-unknown-linux-gnu"
+chmod +x "desktop/binaries/bun-${SIDE_ARCH}-unknown-linux-gnu"
 
 echo "==> Building Tauri app"
 ( 
