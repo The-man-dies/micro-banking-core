@@ -104,82 +104,6 @@ fn resolve_server_runtime_dir(resource_dir: &Path) -> PathBuf {
     normalize_windows_path(resource_dir.join("server"))
 }
 
-fn copy_dir_recursive(source: &Path, destination: &Path) -> std::io::Result<()> {
-    std::fs::create_dir_all(destination)?;
-    for entry in std::fs::read_dir(source)? {
-        let entry = entry?;
-        let src_path = entry.path();
-        let dst_path = destination.join(entry.file_name());
-        let file_type = entry.file_type()?;
-        if file_type.is_dir() {
-            copy_dir_recursive(&src_path, &dst_path)?;
-        } else if file_type.is_file() {
-            std::fs::copy(&src_path, &dst_path)?;
-        }
-    }
-    Ok(())
-}
-
-fn runtime_has_required_paths(runtime_dir: &Path) -> bool {
-    runtime_dir.join("dist").join("index.js").exists()
-        && runtime_dir
-            .join("node_modules")
-            .join(".prisma")
-            .join("client")
-            .join("schema.prisma")
-            .exists()
-        && runtime_dir.join("prisma").join("migrations").exists()
-}
-
-fn prepare_local_runtime_dir(source_runtime_dir: &Path, data_dir: &Path) -> Option<PathBuf> {
-    let source_index = source_runtime_dir.join("dist").join("index.js");
-    if !source_index.exists() {
-        return None;
-    }
-
-    let local_runtime_dir = data_dir.join("server-runtime");
-    let local_index = local_runtime_dir.join("dist").join("index.js");
-    let should_refresh = !runtime_has_required_paths(&local_runtime_dir)
-        || !local_index.exists()
-        || std::fs::metadata(&source_index)
-            .and_then(|src| src.modified())
-            .ok()
-            .zip(
-                std::fs::metadata(&local_index)
-                    .and_then(|dst| dst.modified())
-                    .ok(),
-            )
-            .map_or(true, |(src_time, dst_time)| src_time > dst_time);
-
-    if should_refresh {
-        log::info!(
-            "Refreshing local server runtime from {} to {}",
-            source_runtime_dir.to_string_lossy(),
-            local_runtime_dir.to_string_lossy()
-        );
-        if let Err(err) = std::fs::remove_dir_all(&local_runtime_dir) {
-            if err.kind() != std::io::ErrorKind::NotFound {
-                log::warn!(
-                    "Failed to clear local runtime dir {}: {}",
-                    local_runtime_dir.to_string_lossy(),
-                    err
-                );
-            }
-        }
-        if let Err(err) = copy_dir_recursive(source_runtime_dir, &local_runtime_dir) {
-            log::error!(
-                "Failed to copy backend runtime to local dir {}: {}",
-                local_runtime_dir.to_string_lossy(),
-                err
-            );
-            return Some(normalize_windows_path(source_runtime_dir.to_path_buf()));
-        }
-        log::info!("Local server runtime refresh complete.");
-    }
-
-    Some(normalize_windows_path(local_runtime_dir))
-}
-
 fn optional_existing_path(path: PathBuf) -> Option<String> {
     if path.exists() {
         Some(path.to_string_lossy().to_string())
@@ -364,10 +288,7 @@ pub fn run() {
             let bundled_runtime_dir = resource_dir
                 .as_ref()
                 .map(|dir| resolve_server_runtime_dir(dir));
-            let active_runtime_dir = bundled_runtime_dir
-                .as_ref()
-                .and_then(|dir| prepare_local_runtime_dir(dir, &data_dir))
-                .or_else(|| bundled_runtime_dir.as_ref().map(|dir| dir.to_path_buf()));
+            let active_runtime_dir = bundled_runtime_dir.as_ref().map(|dir| dir.to_path_buf());
             if let Some(runtime_dir) = &active_runtime_dir {
                 log::info!(
                     "Using server runtime dir: {}",

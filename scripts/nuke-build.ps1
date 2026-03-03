@@ -20,7 +20,7 @@ Write-Host "==> Staging Tauri backend runtime"
 
 Write-Host "==> Building Tauri app (Windows)"
 Push-Location "desktop"
-& bunx tauri build --config tauri.conf.json
+& bunx tauri build --bundles nsis --config tauri.conf.json
 Pop-Location
 if ($LASTEXITCODE -ne 0) {
     throw "Tauri build failed with exit code $LASTEXITCODE"

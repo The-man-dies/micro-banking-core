@@ -36,6 +36,11 @@
     "resources": [
       "resources/server"
     ],
-    "externalBin": ["binaries/bun"]
+    "externalBin": ["binaries/bun"],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
   }
 }
