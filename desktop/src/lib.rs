@@ -1,5 +1,6 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -68,6 +69,38 @@ fn generate_shutdown_token() -> String {
     format!("{}_{}", std::process::id(), now)
 }
 
+fn normalize_windows_path(path: PathBuf) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let raw = path.to_string_lossy();
+        if let Some(stripped) = raw.strip_prefix(r"\\?\") {
+            return PathBuf::from(stripped);
+        }
+    }
+    path
+}
+
+fn resolve_server_runtime_dir(resource_dir: &Path) -> PathBuf {
+    let candidates = [
+        resource_dir.join("server"),
+        resource_dir.join("_up_").join("server"),
+        resource_dir.join("resources").join("server"),
+        resource_dir.to_path_buf(),
+    ];
+
+    for candidate in &candidates {
+        if candidate.exists() && candidate.join("dist").join("index.js").exists() {
+            return normalize_windows_path(candidate.clone());
+        }
+    }
+    for candidate in &candidates {
+        if candidate.exists() {
+            return normalize_windows_path(candidate.clone());
+        }
+    }
+    normalize_windows_path(resource_dir.join("server"))
+}
+
 fn spawn_backend(
     app: &tauri::AppHandle,
     state: &BackendState,
@@ -77,6 +110,22 @@ fn spawn_backend(
         state.port,
         state.db_path
     );
+    let mut server_runtime_dir = None;
+    let mut server_entrypoint = String::from("dist/index.js");
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        let runtime_dir = resolve_server_runtime_dir(&resource_dir);
+        server_entrypoint = runtime_dir
+            .join("dist")
+            .join("index.js")
+            .to_string_lossy()
+            .to_string();
+        log::info!(
+            "Resolved server runtime dir: {}",
+            runtime_dir.to_string_lossy()
+        );
+        server_runtime_dir = Some(runtime_dir);
+    }
+
     let sidecar_command = match app.shell().sidecar("bun") {
         Ok(cmd) => cmd,
         Err(err) => {
@@ -84,15 +133,23 @@ fn spawn_backend(
             return None;
         }
     }
-    .arg("dist/index.js")
+    .arg(server_entrypoint)
     .env("DATABASE_FILE", &state.db_path)
     .env("DATABASE_URL", format!("file:{}", state.db_path))
     .env("LOG_DIR", &state.log_dir)
     .env("SHUTDOWN_TOKEN", &state.shutdown_token)
     .env("PORT", state.port.to_string());
 
-    let sidecar_command = if let Ok(resource_dir) = app.path().resource_dir() {
-        sidecar_command.current_dir(resource_dir.join("server"))
+    let sidecar_command = if let Some(runtime_dir) = server_runtime_dir {
+        if runtime_dir.exists() {
+            sidecar_command.current_dir(runtime_dir)
+        } else {
+            log::warn!(
+                "Server runtime directory not found for sidecar current_dir: {}",
+                runtime_dir.to_string_lossy()
+            );
+            sidecar_command
+        }
     } else {
         sidecar_command
     };
@@ -214,31 +271,28 @@ pub fn run() {
             let log_dir_str = log_dir.to_string_lossy().to_string();
             let shutdown_token = generate_shutdown_token();
             let resource_dir = app.path().resource_dir().ok();
-            let tauri_env_path = resource_dir.as_ref().map(|dir| {
-                dir.join("server")
-                    .join(".env")
-                    .to_string_lossy()
-                    .to_string()
-            });
-            let prisma_schema_path = resource_dir.as_ref().map(|dir| {
-                dir.join("server")
-                    .join("node_modules")
+            let server_runtime_dir = resource_dir
+                .as_ref()
+                .map(|dir| resolve_server_runtime_dir(dir));
+            let tauri_env_path = server_runtime_dir
+                .as_ref()
+                .map(|dir| dir.join(".env").to_string_lossy().to_string());
+            let prisma_schema_path = server_runtime_dir.as_ref().map(|dir| {
+                dir.join("node_modules")
                     .join(".prisma")
                     .join("client")
                     .join("schema.prisma")
                     .to_string_lossy()
                     .to_string()
             });
-            let prisma_migrations_path = resource_dir.as_ref().map(|dir| {
-                dir.join("server")
-                    .join("prisma")
+            let prisma_migrations_path = server_runtime_dir.as_ref().map(|dir| {
+                dir.join("prisma")
                     .join("migrations")
                     .to_string_lossy()
                     .to_string()
             });
-            let prisma_wasm_path = resource_dir.as_ref().map(|dir| {
-                dir.join("server")
-                    .join("node_modules")
+            let prisma_wasm_path = server_runtime_dir.as_ref().map(|dir| {
+                dir.join("node_modules")
                     .join(".prisma")
                     .join("client")
                     .join("query_compiler_fast_bg.wasm")
