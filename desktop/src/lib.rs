@@ -120,6 +120,17 @@ fn copy_dir_recursive(source: &Path, destination: &Path) -> std::io::Result<()> 
     Ok(())
 }
 
+fn runtime_has_required_paths(runtime_dir: &Path) -> bool {
+    runtime_dir.join("dist").join("index.js").exists()
+        && runtime_dir
+            .join("node_modules")
+            .join(".prisma")
+            .join("client")
+            .join("schema.prisma")
+            .exists()
+        && runtime_dir.join("prisma").join("migrations").exists()
+}
+
 fn prepare_local_runtime_dir(source_runtime_dir: &Path, data_dir: &Path) -> Option<PathBuf> {
     let source_index = source_runtime_dir.join("dist").join("index.js");
     if !source_index.exists() {
@@ -128,7 +139,8 @@ fn prepare_local_runtime_dir(source_runtime_dir: &Path, data_dir: &Path) -> Opti
 
     let local_runtime_dir = data_dir.join("server-runtime");
     let local_index = local_runtime_dir.join("dist").join("index.js");
-    let should_refresh = !local_index.exists()
+    let should_refresh = !runtime_has_required_paths(&local_runtime_dir)
+        || !local_index.exists()
         || std::fs::metadata(&source_index)
             .and_then(|src| src.modified())
             .ok()
@@ -160,6 +172,14 @@ fn prepare_local_runtime_dir(source_runtime_dir: &Path, data_dir: &Path) -> Opti
     }
 
     Some(normalize_windows_path(local_runtime_dir))
+}
+
+fn optional_existing_path(path: PathBuf) -> Option<String> {
+    if path.exists() {
+        Some(path.to_string_lossy().to_string())
+    } else {
+        None
+    }
 }
 
 fn spawn_backend(
@@ -348,29 +368,29 @@ pub fn run() {
                 .map(|dir| dir.to_string_lossy().to_string());
             let tauri_env_path = active_runtime_dir
                 .as_ref()
-                .map(|dir| dir.join(".env").to_string_lossy().to_string());
-            let prisma_schema_path = active_runtime_dir.as_ref().map(|dir| {
-                dir.join("node_modules")
+                .and_then(|dir| optional_existing_path(dir.join(".env")));
+            let prisma_schema_path = active_runtime_dir.as_ref().and_then(|dir| {
+                optional_existing_path(
+                    dir.join("node_modules")
+                        .join(".prisma")
+                        .join("client")
+                        .join("schema.prisma"),
+                )
+            });
+            let prisma_migrations_path = active_runtime_dir.as_ref().and_then(|dir| {
+                optional_existing_path(dir.join("prisma").join("migrations"))
+            });
+            let prisma_wasm_path = active_runtime_dir.as_ref().and_then(|dir| {
+                optional_existing_path(
+                    dir.join("node_modules")
                     .join(".prisma")
                     .join("client")
-                    .join("schema.prisma")
-                    .to_string_lossy()
-                    .to_string()
+                    .join("query_compiler_fast_bg.wasm"),
+                )
             });
-            let prisma_migrations_path = active_runtime_dir.as_ref().map(|dir| {
-                dir.join("prisma")
-                    .join("migrations")
-                    .to_string_lossy()
-                    .to_string()
-            });
-            let prisma_wasm_path = active_runtime_dir.as_ref().map(|dir| {
-                dir.join("node_modules")
-                    .join(".prisma")
-                    .join("client")
-                    .join("query_compiler_fast_bg.wasm")
-                    .to_string_lossy()
-                    .to_string()
-            });
+            if prisma_migrations_path.is_none() {
+                log::warn!("Prisma migrations directory not found in runtime; startup will skip migrations.");
+            }
             let port = read_env_u64("PORT", 3000) as u16;
             let health_timeout_secs = read_env_u64("BACKEND_HEALTH_TIMEOUT_SECS", 30);
             let restart_backoff_max_secs = read_env_u64("BACKEND_RESTART_BACKOFF_MAX_SECS", 30);
