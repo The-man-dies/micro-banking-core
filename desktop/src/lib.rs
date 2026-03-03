@@ -152,6 +152,11 @@ fn prepare_local_runtime_dir(source_runtime_dir: &Path, data_dir: &Path) -> Opti
             .map_or(true, |(src_time, dst_time)| src_time > dst_time);
 
     if should_refresh {
+        log::info!(
+            "Refreshing local server runtime from {} to {}",
+            source_runtime_dir.to_string_lossy(),
+            local_runtime_dir.to_string_lossy()
+        );
         if let Err(err) = std::fs::remove_dir_all(&local_runtime_dir) {
             if err.kind() != std::io::ErrorKind::NotFound {
                 log::warn!(
@@ -169,6 +174,7 @@ fn prepare_local_runtime_dir(source_runtime_dir: &Path, data_dir: &Path) -> Opti
             );
             return Some(normalize_windows_path(source_runtime_dir.to_path_buf()));
         }
+        log::info!("Local server runtime refresh complete.");
     }
 
     Some(normalize_windows_path(local_runtime_dir))
@@ -337,6 +343,11 @@ async fn backoff_or_stop(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let data_dir = app
@@ -489,11 +500,6 @@ pub fn run() {
                 }
             });
 
-            app.handle().plugin(
-                tauri_plugin_log::Builder::default()
-                    .level(log::LevelFilter::Info)
-                    .build(),
-            )?;
             Ok(())
         })
         .on_window_event(|window, event| {
