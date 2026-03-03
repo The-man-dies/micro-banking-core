@@ -7,7 +7,7 @@
     "frontendDist": "../client/dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "",
-    "beforeBuildCommand": ""
+    "beforeBuildCommand": "cd .. && bun run tauri:stage"
   },
   "app": {
     "windows": [
