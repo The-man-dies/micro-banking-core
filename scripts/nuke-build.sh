@@ -52,8 +52,8 @@ fi
 
 echo "==> Cleaning build artifacts"
 rm -rf desktop/target
-rm -f desktop/binaries/server-*
-rm -rf server/node_modules/.prisma server/node_modules/@prisma/client
+rm -f desktop/binaries/bun-*
+rm -rf desktop/resources/server
 rm -rf client/dist
 
 echo "==> Building frontend"
@@ -63,17 +63,8 @@ echo "==> Building frontend"
   bun run build
 )
 
-echo "==> Preparing Prisma"
-(
-  cd server
-  bun install
-  bunx prisma generate
-)
-echo "==> Copying Prisma client assets"
-bun run copy:engine
-
-echo "==> Compiling sidecar"
-( cd server && bun run compile:linux )
+echo "==> Staging Tauri backend runtime"
+bun run tauri:stage
 
 echo "==> Building Tauri app"
 ( 

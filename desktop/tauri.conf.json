@@ -7,7 +7,7 @@
     "frontendDist": "../client/dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "",
-    "beforeBuildCommand": ""
+    "beforeBuildCommand": "bun scripts/stage-tauri-runtime.ts || bun ../scripts/stage-tauri-runtime.ts"
   },
   "app": {
     "windows": [
@@ -34,10 +34,13 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "../server/.env",
-      "../server/prisma/migrations",
-      "resources/*"
+      "resources/server"
     ],
-    "externalBin": ["binaries/server"]
+    "externalBin": ["binaries/bun"],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
   }
 }

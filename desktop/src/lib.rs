@@ -1,5 +1,6 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -10,6 +11,7 @@ use tauri_plugin_shell::ShellExt;
 
 struct BackendState {
     child: Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
+    server_runtime_dir: Option<String>,
     db_path: String,
     log_dir: String,
     shutdown_token: String,
@@ -28,6 +30,7 @@ struct BackendState {
 impl BackendState {
     #[allow(clippy::too_many_arguments)]
     fn new(
+        server_runtime_dir: Option<String>,
         db_path: String,
         log_dir: String,
         shutdown_token: String,
@@ -43,6 +46,7 @@ impl BackendState {
     ) -> Self {
         Self {
             child: Mutex::new(None),
+            server_runtime_dir,
             db_path,
             log_dir,
             shutdown_token,
@@ -68,6 +72,46 @@ fn generate_shutdown_token() -> String {
     format!("{}_{}", std::process::id(), now)
 }
 
+fn normalize_windows_path(path: PathBuf) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let raw = path.to_string_lossy();
+        if let Some(stripped) = raw.strip_prefix(r"\\?\") {
+            return PathBuf::from(stripped);
+        }
+    }
+    path
+}
+
+fn resolve_server_runtime_dir(resource_dir: &Path) -> PathBuf {
+    let candidates = [
+        resource_dir.join("server"),
+        resource_dir.join("_up_").join("server"),
+        resource_dir.join("resources").join("server"),
+        resource_dir.to_path_buf(),
+    ];
+
+    for candidate in &candidates {
+        if candidate.exists() && candidate.join("dist").join("index.js").exists() {
+            return normalize_windows_path(candidate.clone());
+        }
+    }
+    for candidate in &candidates {
+        if candidate.exists() {
+            return normalize_windows_path(candidate.clone());
+        }
+    }
+    normalize_windows_path(resource_dir.join("server"))
+}
+
+fn optional_existing_path(path: PathBuf) -> Option<String> {
+    if path.exists() {
+        Some(path.to_string_lossy().to_string())
+    } else {
+        None
+    }
+}
+
 fn spawn_backend(
     app: &tauri::AppHandle,
     state: &BackendState,
@@ -77,18 +121,47 @@ fn spawn_backend(
         state.port,
         state.db_path
     );
-    let sidecar_command = match app.shell().sidecar("server") {
+    let server_runtime_dir = state
+        .server_runtime_dir
+        .as_ref()
+        .map(|value| PathBuf::from(value.clone()));
+    let server_entrypoint = server_runtime_dir
+        .as_ref()
+        .map(|dir| {
+            dir.join("dist")
+                .join("index.js")
+                .to_string_lossy()
+                .to_string()
+        })
+        .unwrap_or_else(|| String::from("dist/index.js"));
+
+    let sidecar_command = match app.shell().sidecar("bun") {
         Ok(cmd) => cmd,
         Err(err) => {
-            log::error!("Failed to resolve sidecar 'server': {}", err);
+            log::error!("Failed to resolve sidecar 'bun': {}", err);
             return None;
         }
     }
+    .arg(server_entrypoint)
     .env("DATABASE_FILE", &state.db_path)
     .env("DATABASE_URL", format!("file:{}", state.db_path))
     .env("LOG_DIR", &state.log_dir)
     .env("SHUTDOWN_TOKEN", &state.shutdown_token)
     .env("PORT", state.port.to_string());
+
+    let sidecar_command = if let Some(runtime_dir) = server_runtime_dir {
+        if runtime_dir.exists() {
+            sidecar_command.current_dir(runtime_dir)
+        } else {
+            log::warn!(
+                "Server runtime directory not found for sidecar current_dir: {}",
+                runtime_dir.to_string_lossy()
+            );
+            sidecar_command
+        }
+    } else {
+        sidecar_command
+    };
 
     let sidecar_command = if let Some(env_path) = &state.tauri_env_path {
         sidecar_command.env("TAURI_ENV_PATH", env_path)
@@ -114,48 +187,10 @@ fn spawn_backend(
         sidecar_command
     };
 
-    // Explicitly set the engine path for bundled builds
-    let sidecar_command = if let Ok(resource_dir) = app.path().resource_dir() {
-        let path = resource_dir.join("prisma-client");
-        let mut found_engine = None;
-
-        // Try to find any file that looks like a Prisma engine (binary or library)
-        if let Ok(entries) = std::fs::read_dir(&path) {
-            for entry in entries.flatten() {
-                let name = entry.file_name().to_string_lossy().to_string();
-                let lower_name = name.to_lowercase();
-
-                // Match binary engines (query-engine-*) or library engines (libquery_engine-*)
-                // and ignore unrelated files like schema or package.json
-                if (lower_name.starts_with("query-engine-")
-                    || lower_name.starts_with("query_engine-")
-                    || lower_name.starts_with("libquery_engine-"))
-                    && !lower_name.ends_with(".d.ts")
-                    && !lower_name.ends_with(".js")
-                {
-                    found_engine = Some(path.join(name));
-                    break;
-                }
-            }
-        }
-
-        if let Some(engine_path) = found_engine {
-            let engine_path_str = engine_path.to_string_lossy().to_string();
-            // Set BOTH variables to be absolutely sure Prisma finds it
-            sidecar_command
-                .env("PRISMA_QUERY_ENGINE_LIBRARY", &engine_path_str)
-                .env("PRISMA_QUERY_ENGINE_BINARY", &engine_path_str)
-        } else {
-            sidecar_command
-        }
-    } else {
-        sidecar_command
-    };
-
     let (rx, child) = match sidecar_command.spawn() {
         Ok(value) => value,
         Err(err) => {
-            log::error!("Failed to spawn sidecar 'server': {}", err);
+            log::error!("Failed to spawn sidecar 'bun': {}", err);
             return None;
         }
     };
@@ -232,6 +267,11 @@ async fn backoff_or_stop(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let data_dir = app
@@ -245,29 +285,44 @@ pub fn run() {
             let log_dir_str = log_dir.to_string_lossy().to_string();
             let shutdown_token = generate_shutdown_token();
             let resource_dir = app.path().resource_dir().ok();
-            let tauri_env_path = resource_dir.as_ref().map(|dir| {
-                dir.join("_up_")
-                    .join("server")
-                    .join(".env")
-                    .to_string_lossy()
-                    .to_string()
-            });
-            let prisma_schema_path = resource_dir
+            let bundled_runtime_dir = resource_dir
                 .as_ref()
-                .map(|dir| dir.join("schema.prisma").to_string_lossy().to_string());
-            let prisma_migrations_path = resource_dir.as_ref().map(|dir| {
-                dir.join("_up_")
-                    .join("server")
-                    .join("prisma")
-                    .join("migrations")
-                    .to_string_lossy()
-                    .to_string()
+                .map(|dir| resolve_server_runtime_dir(dir));
+            let active_runtime_dir = bundled_runtime_dir.as_ref().map(|dir| dir.to_path_buf());
+            if let Some(runtime_dir) = &active_runtime_dir {
+                log::info!(
+                    "Using server runtime dir: {}",
+                    runtime_dir.to_string_lossy()
+                );
+            }
+            let server_runtime_dir = active_runtime_dir
+                .as_ref()
+                .map(|dir| dir.to_string_lossy().to_string());
+            let tauri_env_path = active_runtime_dir
+                .as_ref()
+                .and_then(|dir| optional_existing_path(dir.join(".env")));
+            let prisma_schema_path = active_runtime_dir.as_ref().and_then(|dir| {
+                optional_existing_path(
+                    dir.join("node_modules")
+                        .join(".prisma")
+                        .join("client")
+                        .join("schema.prisma"),
+                )
             });
-            let prisma_wasm_path = resource_dir.as_ref().map(|dir| {
-                dir.join("query_compiler_fast_bg.wasm")
-                    .to_string_lossy()
-                    .to_string()
+            let prisma_migrations_path = active_runtime_dir.as_ref().and_then(|dir| {
+                optional_existing_path(dir.join("prisma").join("migrations"))
             });
+            let prisma_wasm_path = active_runtime_dir.as_ref().and_then(|dir| {
+                optional_existing_path(
+                    dir.join("node_modules")
+                    .join(".prisma")
+                    .join("client")
+                    .join("query_compiler_fast_bg.wasm"),
+                )
+            });
+            if prisma_migrations_path.is_none() {
+                log::warn!("Prisma migrations directory not found in runtime; startup will skip migrations.");
+            }
             let port = read_env_u64("PORT", 3000) as u16;
             let health_timeout_secs = read_env_u64("BACKEND_HEALTH_TIMEOUT_SECS", 30);
             let restart_backoff_max_secs = read_env_u64("BACKEND_RESTART_BACKOFF_MAX_SECS", 30);
@@ -277,6 +332,7 @@ pub fn run() {
             log::info!("Database path: {}", db_path_str);
 
             let state = BackendState::new(
+                server_runtime_dir,
                 db_path_str,
                 log_dir_str,
                 shutdown_token,
@@ -365,11 +421,6 @@ pub fn run() {
                 }
             });
 
-            app.handle().plugin(
-                tauri_plugin_log::Builder::default()
-                    .level(log::LevelFilter::Info)
-                    .build(),
-            )?;
             Ok(())
         })
         .on_window_event(|window, event| {

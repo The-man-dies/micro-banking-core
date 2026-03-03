@@ -4,6 +4,7 @@
   },
   "scripts": {
     "copy:engine": "bun scripts/copy-local-engine.ts",
+    "tauri:stage": "bun scripts/stage-tauri-runtime.ts",
     "build:linux": "bash scripts/nuke-build.sh",
     "build:win": "powershell -ExecutionPolicy Bypass -File scripts\\\\nuke-build.ps1",
     "build:mac": "bash scripts/nuke-build-macos.sh"

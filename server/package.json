@@ -13,9 +13,9 @@
     "format": "prettier --write 'src/**/*.ts'",
     "lint": "eslint 'src/**/*.ts'",
     "create-admin": "bun src/scripts/createAdmin.ts",
-    "compile:win": "bun run prisma:generate && bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile=../desktop/binaries/server-x86_64-pc-windows-msvc.exe",
-    "compile:linux": "bun run prisma:generate && bun build ./src/index.ts --compile --target=bun-linux-x64-baseline --outfile=../desktop/binaries/server-x86_64-unknown-linux-gnu",
-    "compile:mac": "bun run prisma:generate && bun build ./src/index.ts --compile --target=bun-darwin-arm64 --outfile=../desktop/binaries/server-aarch64-apple-darwin"
+    "compile:win": "bun run prisma:generate && bun build src/index.ts --outdir dist --target=bun",
+    "compile:linux": "bun run prisma:generate && bun build src/index.ts --outdir dist --target=bun",
+    "compile:mac": "bun run prisma:generate && bun build src/index.ts --outdir dist --target=bun"
   },
   "keywords": [],
   "author": "Dioamn keita",
