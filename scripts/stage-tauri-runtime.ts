@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { spawnSync } from "child_process";
 
-const ROOT = process.cwd();
+const ROOT = path.resolve(import.meta.dir, "..");
 const SERVER_DIR = path.join(ROOT, "server");
 const DESKTOP_DIR = path.join(ROOT, "desktop");
 const SERVER_RESOURCE_DIR = path.join(DESKTOP_DIR, "resources", "server");
