@@ -11,6 +11,7 @@ use tauri_plugin_shell::ShellExt;
 
 struct BackendState {
     child: Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
+    server_runtime_dir: Option<String>,
     db_path: String,
     log_dir: String,
     shutdown_token: String,
@@ -29,6 +30,7 @@ struct BackendState {
 impl BackendState {
     #[allow(clippy::too_many_arguments)]
     fn new(
+        server_runtime_dir: Option<String>,
         db_path: String,
         log_dir: String,
         shutdown_token: String,
@@ -44,6 +46,7 @@ impl BackendState {
     ) -> Self {
         Self {
             child: Mutex::new(None),
+            server_runtime_dir,
             db_path,
             log_dir,
             shutdown_token,
@@ -101,6 +104,64 @@ fn resolve_server_runtime_dir(resource_dir: &Path) -> PathBuf {
     normalize_windows_path(resource_dir.join("server"))
 }
 
+fn copy_dir_recursive(source: &Path, destination: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(destination)?;
+    for entry in std::fs::read_dir(source)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dst_path = destination.join(entry.file_name());
+        let file_type = entry.file_type()?;
+        if file_type.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else if file_type.is_file() {
+            std::fs::copy(&src_path, &dst_path)?;
+        }
+    }
+    Ok(())
+}
+
+fn prepare_local_runtime_dir(source_runtime_dir: &Path, data_dir: &Path) -> Option<PathBuf> {
+    let source_index = source_runtime_dir.join("dist").join("index.js");
+    if !source_index.exists() {
+        return None;
+    }
+
+    let local_runtime_dir = data_dir.join("server-runtime");
+    let local_index = local_runtime_dir.join("dist").join("index.js");
+    let should_refresh = !local_index.exists()
+        || std::fs::metadata(&source_index)
+            .and_then(|src| src.modified())
+            .ok()
+            .zip(
+                std::fs::metadata(&local_index)
+                    .and_then(|dst| dst.modified())
+                    .ok(),
+            )
+            .map_or(true, |(src_time, dst_time)| src_time > dst_time);
+
+    if should_refresh {
+        if let Err(err) = std::fs::remove_dir_all(&local_runtime_dir) {
+            if err.kind() != std::io::ErrorKind::NotFound {
+                log::warn!(
+                    "Failed to clear local runtime dir {}: {}",
+                    local_runtime_dir.to_string_lossy(),
+                    err
+                );
+            }
+        }
+        if let Err(err) = copy_dir_recursive(source_runtime_dir, &local_runtime_dir) {
+            log::error!(
+                "Failed to copy backend runtime to local dir {}: {}",
+                local_runtime_dir.to_string_lossy(),
+                err
+            );
+            return Some(normalize_windows_path(source_runtime_dir.to_path_buf()));
+        }
+    }
+
+    Some(normalize_windows_path(local_runtime_dir))
+}
+
 fn spawn_backend(
     app: &tauri::AppHandle,
     state: &BackendState,
@@ -110,21 +171,19 @@ fn spawn_backend(
         state.port,
         state.db_path
     );
-    let mut server_runtime_dir = None;
-    let mut server_entrypoint = String::from("dist/index.js");
-    if let Ok(resource_dir) = app.path().resource_dir() {
-        let runtime_dir = resolve_server_runtime_dir(&resource_dir);
-        server_entrypoint = runtime_dir
-            .join("dist")
-            .join("index.js")
-            .to_string_lossy()
-            .to_string();
-        log::info!(
-            "Resolved server runtime dir: {}",
-            runtime_dir.to_string_lossy()
-        );
-        server_runtime_dir = Some(runtime_dir);
-    }
+    let server_runtime_dir = state
+        .server_runtime_dir
+        .as_ref()
+        .map(|value| PathBuf::from(value.clone()));
+    let server_entrypoint = server_runtime_dir
+        .as_ref()
+        .map(|dir| {
+            dir.join("dist")
+                .join("index.js")
+                .to_string_lossy()
+                .to_string()
+        })
+        .unwrap_or_else(|| String::from("dist/index.js"));
 
     let sidecar_command = match app.shell().sidecar("bun") {
         Ok(cmd) => cmd,
@@ -271,13 +330,26 @@ pub fn run() {
             let log_dir_str = log_dir.to_string_lossy().to_string();
             let shutdown_token = generate_shutdown_token();
             let resource_dir = app.path().resource_dir().ok();
-            let server_runtime_dir = resource_dir
+            let bundled_runtime_dir = resource_dir
                 .as_ref()
                 .map(|dir| resolve_server_runtime_dir(dir));
-            let tauri_env_path = server_runtime_dir
+            let active_runtime_dir = bundled_runtime_dir
+                .as_ref()
+                .and_then(|dir| prepare_local_runtime_dir(dir, &data_dir))
+                .or_else(|| bundled_runtime_dir.as_ref().map(|dir| dir.to_path_buf()));
+            if let Some(runtime_dir) = &active_runtime_dir {
+                log::info!(
+                    "Using server runtime dir: {}",
+                    runtime_dir.to_string_lossy()
+                );
+            }
+            let server_runtime_dir = active_runtime_dir
+                .as_ref()
+                .map(|dir| dir.to_string_lossy().to_string());
+            let tauri_env_path = active_runtime_dir
                 .as_ref()
                 .map(|dir| dir.join(".env").to_string_lossy().to_string());
-            let prisma_schema_path = server_runtime_dir.as_ref().map(|dir| {
+            let prisma_schema_path = active_runtime_dir.as_ref().map(|dir| {
                 dir.join("node_modules")
                     .join(".prisma")
                     .join("client")
@@ -285,13 +357,13 @@ pub fn run() {
                     .to_string_lossy()
                     .to_string()
             });
-            let prisma_migrations_path = server_runtime_dir.as_ref().map(|dir| {
+            let prisma_migrations_path = active_runtime_dir.as_ref().map(|dir| {
                 dir.join("prisma")
                     .join("migrations")
                     .to_string_lossy()
                     .to_string()
             });
-            let prisma_wasm_path = server_runtime_dir.as_ref().map(|dir| {
+            let prisma_wasm_path = active_runtime_dir.as_ref().map(|dir| {
                 dir.join("node_modules")
                     .join(".prisma")
                     .join("client")
@@ -308,6 +380,7 @@ pub fn run() {
             log::info!("Database path: {}", db_path_str);
 
             let state = BackendState::new(
+                server_runtime_dir,
                 db_path_str,
                 log_dir_str,
                 shutdown_token,
