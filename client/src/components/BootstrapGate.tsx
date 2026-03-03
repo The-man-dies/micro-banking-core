@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { api } from "../services/api-client";
 import useAuthStore from "../features/auth/useAuthStore";
 import type { ApiEnvelope } from "../types/api";
@@ -6,10 +12,14 @@ import type { ApiEnvelope } from "../types/api";
 const CHECK_INTERVAL_MS = 1500;
 const MAX_WAIT_MS = 2 * 60 * 1000;
 
-const BootstrapGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const BootstrapGate: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [ready, setReady] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [statusText, setStatusText] = useState("Initialisation de l'application...");
+  const [statusText, setStatusText] = useState(
+    "Initialisation de l'application...",
+  );
   const [errorText, setErrorText] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const intervalRef = useRef<number | null>(null);
