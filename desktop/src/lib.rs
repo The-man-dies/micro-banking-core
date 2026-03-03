@@ -220,17 +220,15 @@ pub fn run() {
                     .to_string_lossy()
                     .to_string()
             });
-            let prisma_schema_path = resource_dir
-                .as_ref()
-                .map(|dir| {
-                    dir.join("server")
-                        .join("node_modules")
-                        .join(".prisma")
-                        .join("client")
-                        .join("schema.prisma")
-                        .to_string_lossy()
-                        .to_string()
-                });
+            let prisma_schema_path = resource_dir.as_ref().map(|dir| {
+                dir.join("server")
+                    .join("node_modules")
+                    .join(".prisma")
+                    .join("client")
+                    .join("schema.prisma")
+                    .to_string_lossy()
+                    .to_string()
+            });
             let prisma_migrations_path = resource_dir.as_ref().map(|dir| {
                 dir.join("server")
                     .join("prisma")
