@@ -21,7 +21,7 @@ This avoids Prisma runtime engine resolution issues found with `bun build --comp
 Current release line is aligned to:
 - App version: `0.0.1`
 - Cargo package version: `0.0.1`
-- Release tag trigger: `v.0.0.1`
+- Release tag trigger: any tag matching `v*`
 
 ## Prerequisites
 
@@ -107,10 +107,10 @@ Builds bundles on:
 Uploads OS-specific bundle artifacts.
 
 ### 3) Release workflow (tag-driven)
-File: `.github/workflows/release-tag-v0.0.1.yml`
+File: `.github/workflows/release-tag.yml`
 
 Triggers:
-- push tag `v.0.0.1`
+- push tag matching `v*`
 - manual (`workflow_dispatch`)
 
 Builds all platforms, then publishes GitHub release assets.

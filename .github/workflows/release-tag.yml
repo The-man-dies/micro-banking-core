@@ -1,9 +1,9 @@
-name: Release v0.0.1
+name: Release (Tag)
 
 on:
   push:
     tags:
-      - 'v.0.0.1'
+      - 'v*'
   workflow_dispatch:
 
 jobs:
