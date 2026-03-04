@@ -39,8 +39,8 @@ Current release line is aligned to:
 bun install
 
 # optional explicit installs
-cd client && bun install
-cd ../server && bun install
+(cd client && bun install)
+(cd server && bun install)
 ```
 
 ## Development
@@ -142,4 +142,4 @@ Builds all platforms, then publishes GitHub release assets.
 
 ## License
 
-MIT (or project-defined license policy).
+MIT License

@@ -1,5 +1,8 @@
 name: Build Multi-Platform
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:
@@ -7,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: Build (${{ matrix.os }})
+    name: "🏗️ Build | ${{ matrix.platform }}"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,42 +34,56 @@ jobs:
             artifact_path: |
               desktop/target/release/bundle/dmg/*.dmg
               desktop/target/release/bundle/macos/*.app
+              desktop/target/release/bundle/macos/*.app.tar.gz
 
     steps:
-      - name: Checkout
+      - name: "📥 Checkout"
         uses: actions/checkout@v4
 
-      - name: Setup Bun
+      - name: "🥟 Setup Bun"
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Setup Rust
+      - name: "🦀 Setup Rust"
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Cargo
+      - name: "💾 Cache Cargo"
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             desktop -> target
 
-      - name: Root dependencies
+      - name: "📦 Install root deps"
         run: bun install
 
-      - name: Build Windows bundle
+      - name: "🐧 Install Linux system deps (Tauri)"
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libsoup2.4-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: "🪟 Build Windows bundle"
         if: matrix.platform == 'windows'
         shell: powershell
-        run: ./scripts/nuke-build.ps1
+        run: powershell -ExecutionPolicy Bypass -File scripts\\nuke-build.ps1
 
-      - name: Build Linux bundle
+      - name: "🐧 Build Linux bundles"
         if: matrix.platform == 'linux'
         run: ./scripts/nuke-build.sh
 
-      - name: Build macOS bundle
+      - name: "🍎 Build macOS bundles"
         if: matrix.platform == 'macos'
         run: ./scripts/nuke-build-macos.sh
 
-      - name: Upload bundle artifacts
+      - name: "📤 Upload bundle artifacts"
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}

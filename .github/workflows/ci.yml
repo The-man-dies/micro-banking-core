@@ -1,5 +1,8 @@
 name: CI Checks
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:
@@ -7,79 +10,79 @@ on:
 
 jobs:
   client:
-    name: Client Checks
+    name: "🎨 Client | Lint + Type + Prettier + Build"
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./client
     steps:
-      - name: Checkout
+      - name: "📥 Checkout"
         uses: actions/checkout@v4
 
-      - name: Setup Bun
+      - name: "🥟 Setup Bun"
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install dependencies
+      - name: "📦 Install deps"
         run: bun install
 
-      - name: Lint
+      - name: "🧹 Lint (ESLint)"
         run: bun run lint
 
-      - name: Type check
+      - name: "🧠 Type check (TSC)"
         run: bun run tsc --noEmit
 
-      - name: Prettier check
+      - name: "🧾 Prettier check"
         run: bun run prettier --check "src/**/*.{ts,tsx,js,json,css,md}"
 
-      - name: Build
+      - name: "🏗️ Build client"
         run: bun run build
 
   server:
-    name: Server Checks
+    name: "⚙️ Server | Prisma + Lint + Type + Prettier + Build"
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./server
     steps:
-      - name: Checkout
+      - name: "📥 Checkout"
         uses: actions/checkout@v4
 
-      - name: Setup Bun
+      - name: "🥟 Setup Bun"
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install dependencies
+      - name: "📦 Install deps"
         run: bun install
 
-      - name: Generate Prisma client
+      - name: "🗄️ Generate Prisma client"
         run: bunx prisma generate
 
-      - name: Lint
+      - name: "🧹 Lint (ESLint)"
         run: bun run lint
 
-      - name: Type check
+      - name: "🧠 Type check (TSC)"
         run: bun run tsc --noEmit
 
-      - name: Prettier check
+      - name: "🧾 Prettier check"
         run: bun run prettier --check "src/**/*.{ts,js,json,md}"
 
-      - name: Build
+      - name: "🏗️ Build server"
         run: bun run build
 
   desktop:
-    name: Desktop Rust Checks
+    name: "🦀 Desktop | rustfmt + clippy + tests"
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./desktop
     steps:
-      - name: Checkout
+      - name: "📥 Checkout"
         uses: actions/checkout@v4
 
-      - name: Install Linux dependencies (Tauri)
+      - name: "🐧 Install Linux system deps (Tauri)"
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -91,22 +94,22 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
-      - name: Setup Rust
+      - name: "🦀 Setup Rust"
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
-      - name: Cache Cargo
+      - name: "💾 Cache Cargo"
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             desktop -> target
 
-      - name: Rust fmt check
+      - name: "🧼 rustfmt --check"
         run: cargo fmt --all -- --check
 
-      - name: Rust clippy
+      - name: "🔍 clippy -D warnings"
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Rust tests
+      - name: "🧪 cargo test"
         run: cargo test --all-features
