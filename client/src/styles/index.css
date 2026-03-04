@@ -2,28 +2,28 @@
 @plugin "daisyui";
 
 /* Fallback tokens for older WebView/CSS engines that may not parse oklch.
-   Keep these in plain hex so DaisyUI vars remain usable in packaged Windows builds. */
-[data-theme="light"] {
-  --color-base-100: #ffffff;
-  --color-base-200: #f5f6f8;
-  --color-base-300: #e6e8eb;
-  --color-base-content: #1f2937;
-  --color-primary: #4f46e5;
+   Scoped to the app theme in packaged Windows builds. */
+[data-theme="dark"] {
+  --color-base-100: #111827;
+  --color-base-200: #1f2937;
+  --color-base-300: #374151;
+  --color-base-content: #f3f4f6;
+  --color-primary: #6366f1;
   --color-primary-content: #eef2ff;
   --color-secondary: #e11d48;
   --color-secondary-content: #fff1f2;
-  --color-accent: #0ea5a8;
+  --color-accent: #06b6d4;
   --color-accent-content: #083344;
-  --color-neutral: #111827;
-  --color-neutral-content: #f3f4f6;
-  --color-info: #0ea5e9;
+  --color-neutral: #0b1220;
+  --color-neutral-content: #e5e7eb;
+  --color-info: #38bdf8;
   --color-info-content: #082f49;
-  --color-success: #16a34a;
+  --color-success: #22c55e;
   --color-success-content: #052e16;
   --color-warning: #f59e0b;
   --color-warning-content: #451a03;
-  --color-error: #dc2626;
-  --color-error-content: #450a0a;
+  --color-error: #f43f5e;
+  --color-error-content: #4c0519;
 }
 
 html,
