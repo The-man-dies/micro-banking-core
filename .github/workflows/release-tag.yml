@@ -152,5 +152,9 @@ jobs:
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
+          body: |
+            Micro Banking Core is a local-first desktop banking app for small-scale operations.
+            It provides admin-managed workflows for agents, clients, account lifecycle, and accounting, powered by a Tauri + Bun + Prisma stack.
+
           generate_release_notes: true
           files: ${{ steps.collect.outputs.files }}
