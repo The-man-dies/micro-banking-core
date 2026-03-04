@@ -41,7 +41,6 @@ jobs:
             artifact_name: micro-banking-core-macos-bundles
             artifact_path: |
               desktop/target/release/bundle/dmg/*.dmg
-              desktop/target/release/bundle/macos/*.app
               desktop/target/release/bundle/macos/*.app.tar.gz
 
     steps:

@@ -40,7 +40,6 @@ jobs:
             artifact_name: release-macos
             artifact_path: |
               desktop/target/release/bundle/dmg/*.dmg
-              desktop/target/release/bundle/macos/*.app
               desktop/target/release/bundle/macos/*.app.tar.gz
 
     steps:
@@ -118,4 +117,9 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            release-artifacts/**/*
+            release-artifacts/**/*.exe
+            release-artifacts/**/*.dmg
+            release-artifacts/**/*.deb
+            release-artifacts/**/*.rpm
+            release-artifacts/**/*.AppImage
+            release-artifacts/**/*.tar.gz
