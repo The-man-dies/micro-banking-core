@@ -17,6 +17,17 @@ echo "==> Staging Tauri backend runtime"
 bun run tauri:stage
 
 echo "==> Building Tauri app (mac)"
-( cd desktop && bunx tauri build --config tauri.conf.json )
+(
+  set +e
+  cd desktop
+  bunx tauri build --bundles "${BUNDLES:-app,dmg}" --config tauri.conf.json
+  status=$?
+  if [ $status -ne 0 ] && [[ "${BUNDLES:-app,dmg}" == *"dmg"* ]]; then
+    echo "==> DMG bundling failed; retrying with app only"
+    bunx tauri build --bundles "app" --config tauri.conf.json
+    status=$?
+  fi
+  exit $status
+)
 
 echo "==> macOS build complete"

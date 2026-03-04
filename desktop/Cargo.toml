@@ -1,6 +1,6 @@
 [package]
 name = "micro-banking-core"
-version = "0.1.2"
+version = "0.0.1"
 description = "Micro Banking Core desktop application"
 authors = ["Micro-Banking Core Team"]
 license = ""
