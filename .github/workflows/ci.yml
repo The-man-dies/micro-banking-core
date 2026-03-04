@@ -1,88 +1,61 @@
-name: CI Checks
+name: CI
 
 permissions:
   contents: read
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   client:
-    name: "🎨 Client | Lint + Type + Prettier + Build"
+    name: 🎨 Client Checks
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: ./client
+
     steps:
-      - name: "📥 Checkout"
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: "🥟 Setup Bun"
+      - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: "📦 Install deps"
+      - name: Install dependencies
         run: bun install
 
-      - name: "🧹 Lint (ESLint)"
+      - name: Lint (ESLint)
         run: bun run lint
 
-      - name: "🧠 Type check (TSC)"
+      - name: Type Check (TSC)
         run: bun run tsc --noEmit
 
-      - name: "🧾 Prettier check"
+      - name: Prettier Check
         run: bun run prettier --check "src/**/*.{ts,tsx,js,json,css,md}"
 
-      - name: "🏗️ Build client"
-        run: bun run build
-
-  server:
-    name: "⚙️ Server | Prisma + Lint + Type + Prettier + Build"
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./server
-    steps:
-      - name: "📥 Checkout"
-        uses: actions/checkout@v4
-
-      - name: "🥟 Setup Bun"
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: "📦 Install deps"
-        run: bun install
-
-      - name: "🗄️ Generate Prisma client"
-        run: bunx prisma generate
-
-      - name: "🧹 Lint (ESLint)"
-        run: bun run lint
-
-      - name: "🧠 Type check (TSC)"
-        run: bun run tsc --noEmit
-
-      - name: "🧾 Prettier check"
-        run: bun run prettier --check "src/**/*.{ts,js,json,md}"
-
-      - name: "🏗️ Build server"
+      - name: Build
         run: bun run build
 
   desktop:
-    name: "🦀 Desktop | rustfmt + clippy + tests"
+    name: 🦀 Desktop (Rust) Checks
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: ./desktop
+
     steps:
-      - name: "📥 Checkout"
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: "🐧 Install Linux system deps (Tauri)"
+      - name: Install Linux dependencies (Tauri)
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -94,22 +67,57 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
-      - name: "🦀 Setup Rust"
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
-      - name: "💾 Cache Cargo"
+      - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             desktop -> target
 
-      - name: "🧼 rustfmt --check"
+      - name: Format (rustfmt)
         run: cargo fmt --all -- --check
 
-      - name: "🔍 clippy -D warnings"
+      - name: Lint (clippy)
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: "🧪 cargo test"
+      - name: Test
         run: cargo test --all-features
+
+  server:
+    name: ⚙️ Server Checks
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./server
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Generate Prisma Client
+        run: bunx prisma generate
+
+      - name: Lint (ESLint)
+        run: bun run lint
+
+      - name: Prettier Check
+        run: bun run prettier --check "src/**/*.{ts,js,json,md}"
+
+      - name: Type Check (TSC)
+        run: bun run tsc --noEmit
+
+      - name: Build
+        run: bun run build

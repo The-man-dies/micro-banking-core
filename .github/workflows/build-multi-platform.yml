@@ -5,12 +5,14 @@ permissions:
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   build:
-    name: "🏗️ Build | ${{ matrix.platform }}"
+    name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -37,27 +39,27 @@ jobs:
               desktop/target/release/bundle/macos/*.app.tar.gz
 
     steps:
-      - name: "📥 Checkout"
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: "🥟 Setup Bun"
+      - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: "🦀 Setup Rust"
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: "💾 Cache Cargo"
+      - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             desktop -> target
 
-      - name: "📦 Install root deps"
+      - name: Install dependencies
         run: bun install
 
-      - name: "🐧 Install Linux system deps (Tauri)"
+      - name: Install Linux dependencies (Tauri)
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
@@ -70,20 +72,20 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
-      - name: "🪟 Build Windows bundle"
+      - name: Build Windows bundle
         if: matrix.platform == 'windows'
         shell: powershell
         run: powershell -ExecutionPolicy Bypass -File scripts\\nuke-build.ps1
 
-      - name: "🐧 Build Linux bundles"
+      - name: Build Linux bundle
         if: matrix.platform == 'linux'
         run: ./scripts/nuke-build.sh
 
-      - name: "🍎 Build macOS bundles"
+      - name: Build macOS bundle
         if: matrix.platform == 'macos'
         run: ./scripts/nuke-build-macos.sh
 
-      - name: "📤 Upload bundle artifacts"
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
