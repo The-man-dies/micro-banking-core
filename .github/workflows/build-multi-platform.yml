@@ -90,6 +90,19 @@ jobs:
         if: matrix.platform == 'macos'
         run: ./scripts/nuke-build-macos.sh
 
+      - name: Ensure macOS archive fallback
+        if: matrix.platform == 'macos'
+        shell: bash
+        run: |
+          app_dir="$(find desktop/target/release/bundle/macos -maxdepth 1 -type d -name '*.app' | head -n 1 || true)"
+          if [ -n "$app_dir" ]; then
+            app_name="$(basename "$app_dir")"
+            archive_path="desktop/target/release/bundle/macos/${app_name}.tar.gz"
+            if [ ! -f "$archive_path" ]; then
+              tar -czf "$archive_path" -C "$(dirname "$app_dir")" "$app_name"
+            fi
+          fi
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
