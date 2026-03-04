@@ -40,7 +40,6 @@ jobs:
             artifact_name: release-macos
             artifact_path: |
               desktop/target/release/bundle/dmg/*.dmg
-              desktop/target/release/bundle/macos/*.app
               desktop/target/release/bundle/macos/*.app.tar.gz
 
     steps:
@@ -90,6 +89,19 @@ jobs:
         if: matrix.platform == 'macos'
         run: ./scripts/nuke-build-macos.sh
 
+      - name: Ensure macOS archive fallback
+        if: matrix.platform == 'macos'
+        shell: bash
+        run: |
+          app_dir="$(find desktop/target/release/bundle/macos -maxdepth 1 -type d -name '*.app' | head -n 1 || true)"
+          if [ -n "$app_dir" ]; then
+            app_name="$(basename "$app_dir")"
+            archive_path="desktop/target/release/bundle/macos/${app_name}.tar.gz"
+            if [ ! -f "$archive_path" ]; then
+              tar -czf "$archive_path" -C "$(dirname "$app_dir")" "$app_name"
+            fi
+          fi
+
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -109,6 +121,30 @@ jobs:
         with:
           path: release-artifacts
 
+      - name: Collect release files
+        id: collect
+        shell: bash
+        run: |
+          mapfile -t files < <(find release-artifacts -type f \( \
+            -name '*.exe' -o \
+            -name '*.dmg' -o \
+            -name '*.deb' -o \
+            -name '*.rpm' -o \
+            -name '*.AppImage' -o \
+            -name '*.tar.gz' \
+          \) | sort)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No release artifacts found to publish." >&2
+            exit 1
+          fi
+
+          {
+            echo "files<<EOF"
+            printf '%s\n' "${files[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
@@ -117,5 +153,4 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          files: |
-            release-artifacts/**/*
+          files: ${{ steps.collect.outputs.files }}
