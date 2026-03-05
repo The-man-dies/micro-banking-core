@@ -19,7 +19,7 @@ This system allows managing agents, clients, and client accounts with strict bus
 - [Development](#development)
 - [Build Commands](#build-commands)
 - [Validation Status](#validation-status)
-- [CI/CD](#cicd)
+- [CI/CD](#ci-cd)
 - [Versioning and Release](#versioning-and-release)
 - [Repository Structure](#repository-structure)
 - [Contributing](#contributing)
@@ -27,6 +27,7 @@ This system allows managing agents, clients, and client accounts with strict bus
 
 ---
 
+<a id="features"></a>
 ## ✨ Features
 
 - Local-first architecture with SQLite database and migration support.
@@ -39,6 +40,7 @@ This system allows managing agents, clients, and client accounts with strict bus
 
 ---
 
+<a id="business-rules"></a>
 ## 📜 Business Rules
 
 1. **Client Engagement**
@@ -63,6 +65,7 @@ This system allows managing agents, clients, and client accounts with strict bus
 
 ---
 
+<a id="user-roles"></a>
 ## 👥 User Roles
 
 1. **Admin**
@@ -80,6 +83,7 @@ This system allows managing agents, clients, and client accounts with strict bus
 
 ---
 
+<a id="account-lifecycle"></a>
 ## 🏦 Account Lifecycle
 
 ```mermaid
@@ -95,6 +99,7 @@ flowchart TD
 
 ---
 
+<a id="diagrams"></a>
 ## 📊 Diagrams
 
 ### 1️⃣ Admin → Agent → Client Relationship
@@ -120,6 +125,7 @@ stateDiagram-v2
 
 ---
 
+<a id="technical-stack"></a>
 ## 🛠 Technical Stack
 
 - **Desktop Shell:** Tauri (Rust)
@@ -130,6 +136,7 @@ stateDiagram-v2
 
 ---
 
+<a id="architecture"></a>
 ## 🧩 Architecture
 
 Monorepo structure:
@@ -150,6 +157,7 @@ Windows packaging:
 
 ---
 
+<a id="prerequisites"></a>
 ## ⚙️ Prerequisites
 
 - Bun (latest stable)
@@ -161,6 +169,7 @@ Windows packaging:
 
 ---
 
+<a id="installation"></a>
 ## ⚙️ Installation
 
 ```bash
@@ -178,6 +187,7 @@ bun install
 
 ---
 
+<a id="development"></a>
 ## 🧪 Development
 
 `⚠️ Current status:` development mode is currently broken and not considered reliable.
@@ -195,6 +205,7 @@ bun run dev
 
 ---
 
+<a id="build-commands"></a>
 ## 🏗️ Build Commands
 
 From repository root:
@@ -218,6 +229,7 @@ These scripts orchestrate:
 
 ---
 
+<a id="validation-status"></a>
 ## ✅ Validation Status
 
 Current executable validation coverage:
@@ -231,6 +243,7 @@ Reason:
 
 ---
 
+<a id="ci-cd"></a>
 ## 🔁 CI/CD
 
 ### CI Checks
@@ -262,6 +275,7 @@ Builds all platforms and publishes GitHub Release assets.
 
 ---
 
+<a id="versioning-and-release"></a>
 ## 🏷️ Versioning and Release
 
 Current line:
@@ -280,6 +294,7 @@ git push origin v0.0.1
 
 ---
 
+<a id="repository-structure"></a>
 ## 🗂 Repository Structure
 
 ```text
@@ -293,6 +308,7 @@ git push origin v0.0.1
 
 ---
 
+<a id="contributing"></a>
 ## 🤝 Contributing
 
 - Fork the repository and create a branch for your feature or fix.
@@ -305,6 +321,7 @@ git push origin v0.0.1
 
 ---
 
+<a id="license"></a>
 ## 📄 License
 
 MIT License.

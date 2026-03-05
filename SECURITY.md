@@ -20,7 +20,10 @@ The following versions are currently considered maintained and reliable for secu
 If you discover a security issue:
 
 1. Do not open a public issue with exploit details.
-2. Send a private report to: `diomankeita001@gmail.com` or `niagnouma001@gmail.com`
+2. Use GitHub's private vulnerability reporting flow:
+   - Go to the repository `Security` tab.
+   - Open `Advisories`.
+   - Click `Report a vulnerability`.
 3. Include reproduction steps, impact, and affected version.
 
 Target response times:
