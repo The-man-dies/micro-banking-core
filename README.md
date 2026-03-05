@@ -55,7 +55,7 @@ This system allows managing agents, clients, and client accounts with strict bus
    - If a client account is empty (balance = 0) and **30 days elapse**, the account expires automatically.
    - Expired accounts can be renewed by the admin, setting a new engagement period.
    - If a client deposits money after creation/reactivation and the 30 days elapse, the account switches to **withdraw-only**, blocking new deposits.
-   - The account fully expires once the balance reaches 0, or if it is 0 and the 30 days have elapsed.
+   - An account in withdraw-only mode expires once its balance reaches 0.
 
 4. **Agent-Client Relationship**
    - A client is linked to **one agent**.
